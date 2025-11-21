@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h3>Nueva venta</h3>
+
+<form method="POST" class="row g-3">
+
+    <input type="hidden" name="producto_id" id="producto_id_hidden">
+
+    <div class="col-md-6">
+        <label>Producto</label>
+        <input id="searchProducto" class="form-control" autocomplete="off">
+        <div id="sugerencias" class="list-group position-absolute"></div>
+    </div>
+
+    <div class="col-md-3">
+        <label>Cantidad</label>
+        <input name="cantidad" type="number" step="0.01" class="form-control">
+    </div>
+
+    <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-primary w-100">Agregar</button>
+    </div>
+</form>
+
+<h4 class="mt-4">Carrito</h4>
+
+<table class="table table-bordered">
+<thead>
+<tr>
+    <th>Producto</th>
+    <th>Cantidad</th>
+    <th>Subtotal</th>
+    <th></th>
+</tr>
+</thead>
+<tbody>
+{% for item in carrito %}
+<tr>
+    <td>{{item.nombre}}</td>
+    <td>{{item.cantidad}}</td>
+    <td>${{item.subtotal}}</td>
+    <td><a href="/ventas/quitar/{{loop.index0}}" class="btn btn-sm btn-danger">Quitar</a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h4>Total: ${{total}}</h4>
+
+<a class="btn btn-success" href="/ventas/finalizar">Finalizar venta</a>
+
+{% endblock %}

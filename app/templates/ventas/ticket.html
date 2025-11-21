@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card p-3 shadow-sm">
+    <h3>Ticket</h3>
+    <p>Fecha: {{fecha}}</p>
+
+    <table class="table">
+    <thead>
+        <tr><th>Producto</th><th>Cant.</th><th>Subtotal</th></tr>
+    </thead>
+
+    <tbody>
+        {% for i in ticket %}
+        <tr>
+            <td>{{i.nombre}}</td>
+            <td>{{i.cantidad}}</td>
+            <td>${{i.subtotal}}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+
+    <h3>Total: ${{total}}</h3>
+
+    <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+</div>
+
+{% endblock %}

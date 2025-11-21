@@ -1,0 +1,20 @@
+body.dark {
+    background: #222 !important;
+    color: #fff !important;
+}
+
+body.dark .card {
+    background: #333 !important;
+    color: #fff !important;
+}
+
+body.dark .list-group-item {
+    background: #333 !important;
+    color: #eee !important;
+}
+
+#sugerencias {
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 5px;
+}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h3>Dashboard</h3>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card p-3 shadow-sm mb-3">
+            <canvas id="ventasChart"></canvas>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card p-3 shadow-sm">
+            <h5>Top productos</h5>
+            <ul id="topList" class="list-group"></ul>
+        </div>
+    </div>
+</div>
+
+<script>
+fetch("/reportes/data")
+    .then(res => res.json())
+    .then(data => {
+        const ctx = document.getElementById("ventasChart");
+
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: data.ventas.map(v => v.dia),
+                datasets: [{
+                    label: "Ventas",
+                    data: data.ventas.map(v => v.total),
+                    borderWidth: 2
+                }]
+            }
+        });
+
+        const lista = document.getElementById("topList");
+        data.top.forEach(t => {
+            lista.innerHTML += `
+                <li class="list-group-item d-flex justify-content-between">
+                    ${t.nombre}
+                    <span class="badge bg-primary">${t.cantidad}</span>
+                </li>`;
+        });
+    });
+</script>
+
+{% endblock %}

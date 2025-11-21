@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verdulería</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+    <a class="navbar-brand" href="/">Verdulería</a>
+
+    <div class="collapse navbar-collapse">
+        <ul class="navbar-nav me-auto">
+
+            <li class="nav-item"><a class="nav-link" href="/productos/">Productos</a></li>
+            <li class="nav-item"><a class="nav-link" href="/ventas/nueva">Nueva venta</a></li>
+            <li class="nav-item"><a class="nav-link" href="/reportes/">Reportes</a></li>
+            <li class="nav-item"><a class="nav-link" href="/reportes/dashboard">Dashboard</a></li>
+            {% if session.get('role') == 'admin' %}
+            <a class="nav-link" href="{{ url_for('usuarios.index') }}">Usuarios</a>
+            {% endif %}
+
+
+        </ul>
+
+        <button id="darkModeToggle" class="btn btn-outline-light me-2">Dark</button>
+
+        {% if session.get('username') %}
+            <span class="navbar-text me-2">Hola, {{session.username}}</span>
+            <a href="/auth/logout" class="btn btn-outline-light">Salir</a>
+        {% else %}
+            <a href="/auth/login" class="btn btn-outline-light">Ingresar</a>
+        {% endif %}
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+        {% for cat, msg in msgs %}
+            <div class="alert alert-{{cat}}">{{msg}}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% block contenido %}{% endblock %}
+</div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

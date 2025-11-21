@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h3>Editar producto</h3>
+
+<form method="POST" class="card p-3 shadow-sm">
+    <label>Nombre</label>
+    <input name="nombre" value="{{producto.nombre}}" class="form-control mb-2">
+
+    <label>Categoría</label>
+    <input name="categoria" value="{{producto.categoria}}" class="form-control mb-2">
+
+    <label>Precio</label>
+    <input name="precio" value="{{producto.precio}}" class="form-control mb-2" type="number" step="0.01">
+
+    <label>Stock</label>
+    <input name="stock" value="{{producto.stock}}" class="form-control mb-2" type="number" step="0.01">
+
+    <label>Unidad</label>
+    <input name="unidad" value="{{producto.unidad}}" class="form-control mb-2">
+
+    <button class="btn btn-warning">Actualizar</button>
+</form>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h3>Productos</h3>
+
+<a href="/productos/nuevo" class="btn btn-primary mb-3">Nuevo producto</a>
+
+<table class="table table-striped">
+<thead>
+<tr>
+    <th>Nombre</th>
+    <th>Categoría</th>
+    <th>Precio</th>
+    <th>Stock</th>
+    <th>Unidad</th>
+    <th></th>
+</tr>
+</thead>
+
+<tbody>
+{% for p in productos %}
+<tr>
+    <td>{{p.nombre}}</td>
+    <td>{{p.categoria}}</td>
+    <td>${{p.precio}}</td>
+    <td>{{p.stock}}</td>
+    <td>{{p.unidad}}</td>
+    <td>
+        <a class="btn btn-sm btn-warning" href="/productos/editar/{{p.id}}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="/productos/delete/{{p.id}}">Eliminar</a>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

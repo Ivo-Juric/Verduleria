@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h3>Reportes</h3>
+
+<a href="/reportes/export/csv" class="btn btn-info mb-2">Exportar CSV</a>
+<a href="/reportes/export/pdf" class="btn btn-danger mb-2">Exportar PDF</a>
+
+<table class="table table-striped">
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Fecha</th>
+    <th>Total</th>
+</tr>
+</thead>
+
+<tbody>
+{% for v in ventas %}
+<tr>
+    <td>{{v.id}}</td>
+    <td>{{v.fecha}}</td>
+    <td>${{v.total}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}
