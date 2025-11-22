@@ -19,11 +19,11 @@
 <tbody>
 {% for p in productos %}
 <tr>
-    <td>{{p.nombre}}</td>
-    <td>{{p.categoria}}</td>
-    <td>${{p.precio}}</td>
-    <td>{{p.stock}}</td>
-    <td>{{p.unidad}}</td>
+    <td>{{p[1]}}</td> <!-- nombre -->
+    <td>{{p[4]}}</td> <!-- categoria -->
+    <td>${{p[2]}}</td> <!-- precio -->
+    <td>{{p[3]}}</td> <!-- stock -->
+    <td>{{p[5]}}</td> <!-- unidad -->
     <td>
         <a class="btn btn-sm btn-warning" href="/productos/editar/{{p.id}}">Editar</a>
         <a class="btn btn-sm btn-danger" href="/productos/delete/{{p.id}}">Eliminar</a>
