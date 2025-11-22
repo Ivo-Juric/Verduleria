@@ -15,52 +15,63 @@ def index():
     ventas = db.execute("SELECT * FROM ventas ORDER BY fecha DESC LIMIT 50").fetchall()
     return render_template("reportes/reportes.html", ventas=ventas)
 
-@reportes_bp.route("/export/csv")
-@login_required
-def export_csv():
-    db = get_db()
-    rows = db.execute("""
-        SELECT v.id, v.fecha, v.total, d.producto_id, d.cantidad, d.subtotal
-        FROM ventas v
-        JOIN detalle_venta d ON v.id=d.venta_id
-    """).fetchall()
-
-    si = io.StringIO()
-    cw = csv.writer(si)
-    cw.writerow(["venta_id", "fecha", "total", "producto_id", "cantidad", "subtotal"])
-
-    for r in rows:
-        cw.writerow([r["id"], r["fecha"], r["total"],
-                     r["producto_id"], r["cantidad"], r["subtotal"]])
-
-    mem = io.BytesIO()
-    mem.write(si.getvalue().encode("utf-8"))
-    mem.seek(0)
-
-    return send_file(mem, download_name="reporte.csv", as_attachment=True)
-
 @reportes_bp.route("/export/pdf")
 @login_required
 def export_pdf():
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+
     db = get_db()
-    ventas = db.execute("SELECT * FROM ventas ORDER BY fecha DESC LIMIT 100").fetchall()
+    ventas = db.execute("""
+        SELECT id, fecha, total
+        FROM ventas
+        ORDER BY fecha DESC LIMIT 100
+    """).fetchall()
 
+    # Memoria
     mem = io.BytesIO()
-    c = canvas.Canvas(mem, pagesize=letter)
-    y = 750
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(40, y, "Reporte de ventas")
-    c.setFont("Helvetica", 10)
-    y -= 40
+    pdf = SimpleDocTemplate(mem, pagesize=letter)
 
+    styles = getSampleStyleSheet()
+    elementos = []
+
+    # Título
+    titulo = Paragraph("<b>Reporte de Ventas</b>", styles["Title"])
+    elementos.append(titulo)
+    elementos.append(Spacer(1, 20))
+
+    # Encabezados de tabla
+    data = [["ID", "Fecha", "Total"]]
+
+    # Datos
     for v in ventas:
-        c.drawString(40, y, f"ID:{v['id']}  Fecha:{v['fecha']}  Total:${v['total']}")
-        y -= 20
-        if y < 40:
-            c.showPage()
-            y = 750
+        data.append([
+            v["id"],
+            v["fecha"],
+            f"${v['total']}"
+        ])
 
-    c.save()
+    # Tabla
+    tabla = Table(data, colWidths=[60, 200, 100])
+
+    tabla.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+
+        # Bordes
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+    ]))
+
+    elementos.append(tabla)
+
+    # Generar PDF
+    pdf.build(elementos)
     mem.seek(0)
 
     return send_file(mem, download_name="reporte.pdf", as_attachment=True)

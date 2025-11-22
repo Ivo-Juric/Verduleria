@@ -3,19 +3,22 @@
 
 <h3>Nueva venta</h3>
 
-<form method="POST" class="row g-3">
+<form method="POST" class="row g-3" autocomplete="off">
 
+    <!-- hidden que almacena el id del producto seleccionado -->
     <input type="hidden" name="producto_id" id="producto_id_hidden">
 
-    <div class="col-md-6">
+    <div class="col-md-6 position-relative">
         <label>Producto</label>
-        <input id="searchProducto" class="form-control" autocomplete="off">
-        <div id="sugerencias" class="list-group position-absolute"></div>
+        <!-- input visible donde el usuario escribe -->
+        <input id="searchProducto" name="producto_nombre" class="form-control" autocomplete="off">
+        <!-- contenedor de sugerencias (position absolute para superponer) -->
+        <div id="sugerencias" class="list-group position-absolute w-100" style="z-index:1000;"></div>
     </div>
 
     <div class="col-md-3">
         <label>Cantidad</label>
-        <input name="cantidad" type="number" step="0.01" class="form-control">
+        <input name="cantidad" type="number" step="0.01" class="form-control" value="1">
     </div>
 
     <div class="col-md-3 d-flex align-items-end">
@@ -40,7 +43,7 @@
     <td>{{item.nombre}}</td>
     <td>{{item.cantidad}}</td>
     <td>${{item.subtotal}}</td>
-    <td><a href="/ventas/quitar/{{loop.index0}}" class="btn btn-sm btn-danger">Quitar</a></td>
+    <td><a href="{{ url_for('ventas.quitar', idx=loop.index0) }}" class="btn btn-sm btn-danger">Quitar</a></td>
 </tr>
 {% endfor %}
 </tbody>
@@ -48,6 +51,6 @@
 
 <h4>Total: ${{total}}</h4>
 
-<a class="btn btn-success" href="/ventas/finalizar">Finalizar venta</a>
+<a class="btn btn-success" href="{{ url_for('ventas.finalizar') }}">Finalizar venta</a>
 
 {% endblock %}

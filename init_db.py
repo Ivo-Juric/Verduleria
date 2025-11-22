@@ -41,7 +41,6 @@ def init_db():
     );
     """)
 
-    # Categorías iniciales
     cursor.executemany("""
         INSERT OR IGNORE INTO categorias (nombre)
         VALUES (?)
@@ -53,7 +52,7 @@ def init_db():
     ])
 
     # -----------------------
-    # Tabla unidades de medida
+    # Tabla unidades
     # -----------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS unidades (
@@ -99,7 +98,7 @@ def init_db():
     """)
 
     # -----------------------
-    # Detalle ventas
+    # Tabla detalle ventas
     # -----------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS detalle_ventas (
@@ -113,10 +112,73 @@ def init_db():
     );
     """)
 
+    # --------------------------------------------------------------
+    # CARGA AUTOMÁTICA DE PRODUCTOS DE PRUEBA SOLO SI LA TABLA ESTÁ VACÍA
+    # --------------------------------------------------------------
+    cursor.execute("SELECT COUNT(*) FROM productos")
+    if cursor.fetchone()[0] == 0:
+        print("Cargando productos de prueba...")
+        cursor.executemany("""
+            INSERT INTO productos (nombre, precio, stock, categoria_id, unidad_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, [
+            ("Manzana Roja", 800, 50, 1, 1),
+            ("Banana Ecuador", 600, 80, 1, 1),
+            ("Naranja Jugosa", 400, 100, 1, 1),
+            ("Papa Blanca", 300, 120, 3, 1),
+            ("Lechuga Crespa", 500, 40, 4, 2)
+        ])
+
+    # --------------------------------------------------------------
+    # CARGA DE VENTAS DE PRUEBA (solo si no existen)
+    # --------------------------------------------------------------
+    cursor.execute("SELECT COUNT(*) FROM ventas")
+    if cursor.fetchone()[0] == 0:
+        print("Cargando ventas de prueba...")
+
+        ventas = [
+            ("2025-01-10", 5600),
+            ("2025-01-11", 3200),
+            ("2025-01-12", 8900),
+            ("2025-01-13", 4500),
+            ("2025-01-14", 12000)
+        ]
+
+        cursor.executemany("INSERT INTO ventas (fecha, total) VALUES (?, ?)", ventas)
+
+        # Obtener IDs recién insertados
+        cursor.execute("SELECT id FROM ventas ORDER BY id ASC")
+        ventas_ids = [x[0] for x in cursor.fetchall()]
+
+        detalle = [
+            (ventas_ids[0], 1, 3, 2400),
+            (ventas_ids[0], 2, 2, 1200),
+            (ventas_ids[0], 3, 2, 1000),
+
+            (ventas_ids[1], 4, 5, 1500),
+            (ventas_ids[1], 5, 2, 1000),
+
+            (ventas_ids[2], 1, 5, 4000),
+            (ventas_ids[2], 2, 6, 3600),
+            (ventas_ids[2], 3, 3, 1300),
+
+            (ventas_ids[3], 4, 4, 1200),
+            (ventas_ids[3], 1, 3, 2400),
+            (ventas_ids[3], 5, 1, 500),
+
+            (ventas_ids[4], 2, 10, 6000),
+            (ventas_ids[4], 3, 10, 4000),
+            (ventas_ids[4], 4, 8, 2000)
+        ]
+
+        cursor.executemany("""
+            INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, subtotal)
+            VALUES (?, ?, ?, ?)
+        """, detalle)
+
     conn.commit()
     conn.close()
-    print("Base de datos creada correctamente.")
-
+    print("Base de datos creada con datos de ejemplo.")
 
 if __name__ == "__main__":
     init_db()

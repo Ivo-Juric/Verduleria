@@ -3,20 +3,29 @@
 <h3>Nuevo producto</h3>
 
 <form method="POST" class="card p-3 shadow-sm">
+
     <label>Nombre</label>
     <input name="nombre" class="form-control mb-2">
 
     <label>Categoría</label>
-    <input name="categoria" class="form-control mb-2">
+    <select name="categoria_id" class="form-control mb-2">
+        {% for c in categorias %}
+            <option value="{{ c.id }}">{{ c.nombre }}</option>
+        {% endfor %}
+    </select>
 
     <label>Precio</label>
     <input name="precio" class="form-control mb-2" type="number" step="0.01">
 
     <label>Stock</label>
-    <input name="stock" class="form-control mb-2" type="number" step="0.01">
+    <input name="stock" class="form-control mb-2" type="number">
 
-    <label>Unidad</label>
-    <input name="unidad" class="form-control mb-2">
+    <label>Unidad de medida</label>
+    <select name="unidad_id" class="form-control mb-2">
+        {% for u in unidades %}
+            <option value="{{ u.id }}">{{ u.nombre }}</option>
+        {% endfor %}
+    </select>
 
     <button class="btn btn-success">Guardar</button>
 </form>

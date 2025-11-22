@@ -15,10 +15,24 @@ def nueva():
         session["carrito"] = []
 
     if request.method == "POST":
-        producto_id = int(request.form["producto_id"])
-        cantidad = float(request.form["cantidad"])
+        # leer el id del hidden y la cantidad
+        producto_id = request.form.get("producto_id")
+        if not producto_id:
+            flash("Seleccioná un producto válido antes de agregar.", "warning")
+            return redirect(url_for("ventas.nueva"))
+
+        try:
+            producto_id = int(producto_id)
+            cantidad = float(request.form.get("cantidad", 1))
+        except ValueError:
+            flash("Valores inválidos.", "danger")
+            return redirect(url_for("ventas.nueva"))
 
         producto = db.execute("SELECT * FROM productos WHERE id=?", (producto_id,)).fetchone()
+        if not producto:
+            flash("Producto no encontrado.", "danger")
+            return redirect(url_for("ventas.nueva"))
+
         subtotal = producto["precio"] * cantidad
 
         session["carrito"].append({
@@ -30,11 +44,11 @@ def nueva():
         })
         session.modified = True
 
-    total = sum(i["subtotal"] for i in session["carrito"])
+    total = sum(i["subtotal"] for i in session.get("carrito", []))
 
     return render_template("ventas/nueva.html",
                            productos=productos,
-                           carrito=session["carrito"],
+                           carrito=session.get("carrito", []),
                            total=total)
 
 @ventas_bp.route("/quitar/<int:idx>")
@@ -64,16 +78,15 @@ def finalizar():
 
     for i in carrito:
         cur.execute("""
-        INSERT INTO detalle_venta(venta_id, producto_id, cantidad, subtotal)
+        INSERT INTO detalle_ventas(venta_id, producto_id, cantidad, subtotal)
         VALUES (?, ?, ?, ?)
         """, (venta_id, i["producto_id"], i["cantidad"], i["subtotal"]))
 
-        db.execute("UPDATE productos SET stock = stock - ? WHERE id=?",
-                   (i["cantidad"], i["producto_id"]))
+        cur.execute("UPDATE productos SET stock = stock - ? WHERE id=?", (i["cantidad"], i["producto_id"]))
 
     db.commit()
 
-    ticket = carrito.copy()
+    ticket = list(carrito)  # copia
     session["carrito"] = []
     session.modified = True
 
