@@ -1,2 +1,4 @@
 flask
-reportlab
+werkzeug
+jinja2
+gunicorn
