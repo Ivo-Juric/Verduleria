@@ -22,18 +22,54 @@ def init_db():
     );
     """)
 
-    # Crear usuario admin por defecto
-    cursor.execute("""
-    SELECT * FROM usuarios WHERE username = 'admin';
-    """)
-    admin = cursor.fetchone()
-
-    if not admin:
+    # Crear usuario admin si no existe
+    cursor.execute("SELECT * FROM usuarios WHERE username = 'admin'")
+    if not cursor.fetchone():
         cursor.execute("""
-        INSERT INTO usuarios(username, password_hash, role)
-        VALUES (?, ?, ?)
+            INSERT INTO usuarios (username, password_hash, role)
+            VALUES (?, ?, ?)
         """, ("admin", hash_pass("admin123"), "admin"))
         print("Usuario admin creado: admin / admin123")
+
+    # -----------------------
+    # Tabla categorías
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS categorias (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE
+    );
+    """)
+
+    # Categorías iniciales
+    cursor.executemany("""
+        INSERT OR IGNORE INTO categorias (nombre)
+        VALUES (?)
+    """, [
+        ("Frutas",),
+        ("Verduras",),
+        ("Tubérculos",),
+        ("Hoja Verde",)
+    ])
+
+    # -----------------------
+    # Tabla unidades de medida
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS unidades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE
+    );
+    """)
+
+    cursor.executemany("""
+        INSERT OR IGNORE INTO unidades (nombre)
+        VALUES (?)
+    """, [
+        ("Kg",),
+        ("Unidad",),
+        ("Paquete",)
+    ])
 
     # -----------------------
     # Tabla productos
@@ -43,7 +79,11 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
         precio REAL NOT NULL,
-        stock INTEGER NOT NULL DEFAULT 0
+        stock INTEGER NOT NULL DEFAULT 0,
+        categoria_id INTEGER,
+        unidad_id INTEGER,
+        FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+        FOREIGN KEY (unidad_id) REFERENCES unidades(id)
     );
     """)
 
@@ -59,7 +99,7 @@ def init_db():
     """)
 
     # -----------------------
-    # Detalle de ventas
+    # Detalle ventas
     # -----------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS detalle_ventas (
