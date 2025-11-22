@@ -9,7 +9,18 @@ productos_bp = Blueprint("productos", __name__, url_prefix="/productos")
 @login_required
 def lista():
     db = get_db()
-    productos = db.execute("SELECT * FROM productos").fetchall()
+    productos = db.execute("""
+        SELECT
+            p.id,
+            p.nombre,
+            p.precio,
+            p.stock,
+            c.nombre AS categoria,
+            u.nombre AS unidad
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id = c.id
+        LEFT JOIN unidades u ON p.unidad_id = u.id
+    """).fetchall()
     return render_template("productos/lista.html", productos=productos)
 
 @productos_bp.route("/nuevo", methods=["GET", "POST"])
