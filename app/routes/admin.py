@@ -38,34 +38,51 @@ def cargar_test():
 def cargar_test_ventas():
     db = get_db()
 
-    # Buscar productos existentes
-    productos = db.execute("SELECT id, precio FROM productos").fetchall()
-    if len(productos) == 0:
-        return "Primero cargá productos con /admin/cargar_test"
+    # Crear 5 ventas de prueba
+    ventas = [
+        ("2025-01-10", 5600),
+        ("2025-01-11", 3200),
+        ("2025-01-12", 8900),
+        ("2025-01-13", 4500),
+        ("2025-01-14", 12000)
+    ]
+    db.executemany("INSERT INTO ventas (fecha, total) VALUES (?, ?)", ventas)
 
-    # Crear una venta
-    db.execute(
-        "INSERT INTO ventas (fecha, total) VALUES (datetime('now'), 0)"
+    # Obtener IDs reales de las ventas insertadas
+    ventas_ids = db.execute("SELECT id FROM ventas ORDER BY id DESC LIMIT 5").fetchall()
+    ventas_ids = [v["id"] for v in ventas_ids][::-1]  # ordenar cronológicamente
+
+    # Detalle de ventas basado en los productos que cargaste
+    detalle = [
+        # Venta 1
+        (ventas_ids[0], 1, 3, 2400),  # Manzana Roja
+        (ventas_ids[0], 2, 2, 1200),  # Banana Ecuador
+        (ventas_ids[0], 3, 2, 1000),  # Naranja
+
+        # Venta 2
+        (ventas_ids[1], 4, 5, 1500),  # Papa Blanca
+        (ventas_ids[1], 5, 2, 1000),  # Lechuga
+
+        # Venta 3
+        (ventas_ids[2], 1, 5, 4000),
+        (ventas_ids[2], 2, 6, 3600),
+        (ventas_ids[2], 3, 3, 1300),
+
+        # Venta 4
+        (ventas_ids[3], 4, 4, 1200),
+        (ventas_ids[3], 1, 3, 2400),
+        (ventas_ids[3], 5, 1, 500),
+
+        # Venta 5 (venta grande)
+        (ventas_ids[4], 2, 10, 6000),
+        (ventas_ids[4], 3, 10, 4000),
+        (ventas_ids[4], 4, 8, 2000)
+    ]
+
+    db.executemany(
+        "INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, subtotal) VALUES (?, ?, ?, ?)",
+        detalle
     )
-    venta_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-
-    total_venta = 0
-
-    # Crear detalles de venta (random de 2 productos)
-    detalles = []
-    for p in productos[:2]:  # los primeros 2 productos
-        cantidad = 3
-        subtotal = p["precio"] * cantidad
-        total_venta += subtotal
-        detalles.append((venta_id, p["id"], cantidad, subtotal))
-
-    db.executemany("""
-        INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, subtotal)
-        VALUES (?, ?, ?, ?)
-    """, detalles)
-
-    # Actualizar total de la venta
-    db.execute("UPDATE ventas SET total = ? WHERE id = ?", (total_venta, venta_id))
 
     db.commit()
-    return f"Venta de prueba creada (ID: {venta_id})"
+    return "Ventas de prueba cargadas correctamente"
