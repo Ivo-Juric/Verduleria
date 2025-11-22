@@ -84,7 +84,7 @@ def data():
 
     top = db.execute("""
         SELECT p.nombre, SUM(d.cantidad) AS cantidad
-        FROM detalle_venta d
+        FROM detalle_ventas d
         JOIN productos p ON d.producto_id=p.id
         GROUP BY p.id
         ORDER BY cantidad DESC
