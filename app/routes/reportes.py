@@ -8,6 +8,78 @@ from app.utils.auth_decorators import login_required
 
 reportes_bp = Blueprint("reportes", __name__, url_prefix="/reportes")
 
+
+def _build_ventas_query(args, limit=200):
+    # Leer filtros desde args
+    fecha_desde = args.get("fecha_desde")
+    fecha_hasta = args.get("fecha_hasta")
+    prod_ids = args.getlist("producto")
+    cat_ids = args.getlist("categoria")
+    uni_ids = args.getlist("unidad")
+    precio_min = args.get("precio_min")
+    precio_max = args.get("precio_max")
+
+    sql = "SELECT v.* FROM ventas v"
+    where = []
+    params = []
+
+    # Apply filters using EXISTS on detalle_ventas/products
+    if prod_ids or cat_ids or uni_ids or precio_min or precio_max:
+        sql += " WHERE EXISTS (SELECT 1 FROM detalle_ventas d JOIN productos p ON d.producto_id = p.id WHERE d.venta_id = v.id"
+        conds = []
+        if prod_ids:
+            placeholders = ",".join(["?" for _ in prod_ids])
+            conds.append(f"p.id IN ({placeholders})")
+            params.extend(prod_ids)
+        if cat_ids:
+            placeholders = ",".join(["?" for _ in cat_ids])
+            conds.append(f"p.categoria_id IN ({placeholders})")
+            params.extend(cat_ids)
+        if uni_ids:
+            placeholders = ",".join(["?" for _ in uni_ids])
+            conds.append(f"p.unidad_id IN ({placeholders})")
+            params.extend(uni_ids)
+        # Filtrar por precio unitario del producto
+        if precio_min:
+            conds.append("p.precio >= ?")
+            params.append(precio_min)
+        if precio_max:
+            conds.append("p.precio <= ?")
+            params.append(precio_max)
+
+        if conds:
+            sql += " AND (" + " OR ".join(conds) + ")"
+        sql += ")"
+
+    # Date filters (fuera del EXISTS, sobre la venta)
+    if fecha_desde:
+        where.append("date(substr(v.fecha,1,10)) >= date(?)")
+        params.append(fecha_desde)
+    if fecha_hasta:
+        where.append("date(substr(v.fecha,1,10)) <= date(?)")
+        params.append(fecha_hasta)
+
+    if where:
+        if "WHERE EXISTS" in sql:
+            sql += " AND " + " AND ".join(where)
+        else:
+            sql += " WHERE " + " AND ".join(where)
+
+    sql += f" ORDER BY v.fecha DESC LIMIT {int(limit)}"
+
+    filtros = {
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "prod_ids": prod_ids,
+        "cat_ids": cat_ids,
+        "uni_ids": uni_ids,
+        "precio_min": precio_min,
+        "precio_max": precio_max,
+    }
+
+    return sql, params, filtros
+
+
 @reportes_bp.route("/")
 @login_required
 def index():
@@ -97,11 +169,9 @@ def export_pdf():
     from reportlab.lib.styles import getSampleStyleSheet
 
     db = get_db()
-    ventas = db.execute("""
-        SELECT id, fecha, total
-        FROM ventas
-        ORDER BY fecha DESC LIMIT 100
-    """).fetchall()
+    # Construir la misma consulta que usa la vista de reportes para respetar filtros
+    sql, params, _ = _build_ventas_query(request.args, limit=1000)
+    ventas = db.execute(sql, params).fetchall()
 
     # Memoria
     mem = io.BytesIO()
