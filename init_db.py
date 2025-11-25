@@ -220,6 +220,69 @@ def init_db():
             VALUES (?, ?, ?, ?)
         """, detalle)
 
+    # -----------------------
+    # Tabla carritos pendientes
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS carritos_pendientes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
+        nombre TEXT NOT NULL,
+        total REAL NOT NULL,
+        fecha_creacion TEXT NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    );
+    """)
+
+    # -----------------------
+    # Tabla detalle carritos pendientes
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS detalle_carritos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        carrito_id INTEGER NOT NULL,
+        producto_id INTEGER NOT NULL,
+        cantidad REAL NOT NULL,
+        subtotal REAL NOT NULL,
+        FOREIGN KEY (carrito_id) REFERENCES carritos_pendientes(id),
+        FOREIGN KEY (producto_id) REFERENCES productos(id)
+    );
+    """)
+
+    # -----------------------
+    # Tabla métodos de pago
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS metodos_pago (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE
+    );
+    """)
+
+    cursor.executemany("""
+        INSERT OR IGNORE INTO metodos_pago (nombre)
+        VALUES (?)
+    """, [
+        ("Efectivo",),
+        ("Transferencia",),
+        ("QR",),
+        ("Tarjeta de Débito",)
+    ])
+
+    # -----------------------
+    # Tabla detalles de pago (para ventas)
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS detalle_pago (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        venta_id INTEGER NOT NULL,
+        metodo_id INTEGER NOT NULL,
+        monto REAL NOT NULL,
+        FOREIGN KEY (venta_id) REFERENCES ventas(id),
+        FOREIGN KEY (metodo_id) REFERENCES metodos_pago(id)
+    );
+    """)
+
     conn.commit()
     conn.close()
     print("Base de datos creada con datos de ejemplo.")

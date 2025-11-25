@@ -137,6 +137,16 @@ def gestionar_stock(id):
     return render_template("productos/gestionar_stock.html",
                            producto=producto,
                            proveedores=proveedores)
+@productos_bp.route("/stock/<int:id>")
+@login_required
+def obtener_stock(id):
+    db = get_db()
+    producto = db.execute("SELECT stock FROM productos WHERE id=?", (id,)).fetchone()
+    if producto:
+        return jsonify({"stock": producto["stock"]})
+    return jsonify({"error": "Producto no encontrado"}), 404
+
+
 @productos_bp.route("/autocomplete")
 @login_required
 def autocomplete():
@@ -160,7 +170,7 @@ def autocomplete():
         """, (producto_id,)).fetchall()
     except ValueError:
         pass
-    
+
     # Si no encontró por ID o no es número, busca por nombre
     if not rows:
         rows = db.execute("""

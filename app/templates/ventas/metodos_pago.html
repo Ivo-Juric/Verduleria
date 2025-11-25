@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h3>Finalizar venta - Métodos de pago</h3>
+
+<h4>Resumen del carrito</h4>
+
+<table class="table table-sm">
+<thead>
+<tr>
+    <th>Producto</th>
+    <th>Cantidad</th>
+    <th>Precio Unit.</th>
+    <th>Subtotal</th>
+</tr>
+</thead>
+<tbody>
+{% for item in carrito %}
+<tr>
+    <td>{{ item.nombre }}</td>
+    <td>{{ item.cantidad }} {{ item.unidad or '' }}</td>
+    <td>${{ item.precio }}</td>
+    <td>${{ item.subtotal }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h4>Total a pagar: <strong>${{ total }}</strong></h4>
+
+<hr>
+
+<h4>Seleccionar métodos de pago</h4>
+
+<form method="POST" action="{{ url_for('ventas.finalizar') }}" id="formPago">
+    <div class="row g-3">
+        {% for metodo in metodos %}
+        <div class="col-md-6">
+            <div class="card p-3">
+                <label class="form-label"><strong>{{ metodo.nombre }}</strong></label>
+                <input type="number" step="0.01" min="0" max="{{ total }}" 
+                       name="monto_{{ metodo.nombre }}" class="form-control montoInput" 
+                       placeholder="0.00" value="0">
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-4">
+        <p>Monto total: <strong id="totalIngresado">$0.00</strong></p>
+        <p id="diferencia" class="text-warning d-none">Diferencia: <span id="montoDiferencia"></span></p>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('ventas.nueva') }}" class="btn btn-secondary">Volver</a>
+        <button type="submit" class="btn btn-success" id="btnFinalizar">Finalizar venta</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const total = {{ total }};
+    const inputs = document.querySelectorAll(".montoInput");
+    const totalIngresadoEl = document.querySelector("#totalIngresado");
+    const diferenciaEl = document.querySelector("#diferencia");
+    const montoDiferenciaEl = document.querySelector("#montoDiferencia");
+    const btnFinalizar = document.querySelector("#btnFinalizar");
+
+    function actualizarTotal() {
+        let suma = 0;
+        inputs.forEach(input => {
+            suma += parseFloat(input.value) || 0;
+        });
+
+        totalIngresadoEl.textContent = `$${suma.toFixed(2)}`;
+
+        const diferencia = Math.abs(suma - total);
+        if (Math.abs(suma - total) > 0.01) {
+            diferenciaEl.classList.remove("d-none");
+            montoDiferenciaEl.textContent = `$${diferencia.toFixed(2)}`;
+            btnFinalizar.disabled = true;
+        } else {
+            diferenciaEl.classList.add("d-none");
+            btnFinalizar.disabled = false;
+        }
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener("input", actualizarTotal);
+    });
+
+    // Inicializar
+    actualizarTotal();
+});
+</script>
+
+{% endblock %}

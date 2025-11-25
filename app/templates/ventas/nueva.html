@@ -18,39 +18,144 @@
 
     <div class="col-md-3">
         <label>Cantidad</label>
-        <input name="cantidad" type="number" step="0.01" class="form-control" value="1">
+        <input name="cantidad" type="number" step="0.01" class="form-control" value="1" min="0.01">
+        <small id="stock-warning" class="text-danger d-none"></small>
     </div>
 
     <div class="col-md-3 d-flex align-items-end">
-        <button class="btn btn-primary w-100">Agregar</button>
+        <button type="submit" class="btn btn-primary w-100">Agregar</button>
     </div>
 </form>
 
-<h4 class="mt-4">Carrito</h4>
+<hr>
+
+<h4>Carrito</h4>
 
 <table class="table table-bordered">
 <thead>
 <tr>
     <th>Producto</th>
+    <th>Unidad</th>
     <th>Cantidad</th>
+    <th>Precio Unit.</th>
     <th>Subtotal</th>
     <th></th>
 </tr>
 </thead>
 <tbody>
-{% for item in carrito %}
-<tr>
-    <td>{{item.nombre}}</td>
-    <td>{{item.cantidad}}</td>
-    <td>${{item.subtotal}}</td>
-    <td><a href="{{ url_for('ventas.quitar', idx=loop.index0) }}" class="btn btn-sm btn-danger">Quitar</a></td>
-</tr>
-{% endfor %}
+{% if carrito %}
+    {% for item in carrito %}
+    <tr>
+        <td>{{item.nombre}}</td>
+        <td>{{item.unidad or "-"}}</td>
+        <td>{{item.cantidad}}</td>
+        <td>${{item.precio}}</td>
+        <td>${{item.subtotal}}</td>
+        <td><a href="{{ url_for('ventas.quitar', idx=loop.index0) }}" class="btn btn-sm btn-danger">Quitar</a></td>
+    </tr>
+    {% endfor %}
+{% else %}
+    <tr>
+        <td colspan="6" class="text-center">Carrito vacío</td>
+    </tr>
+{% endif %}
 </tbody>
 </table>
 
 <h4>Total: ${{total}}</h4>
 
-<a class="btn btn-success" href="{{ url_for('ventas.finalizar') }}">Finalizar venta</a>
+{% if carrito %}
+<div class="mb-3">
+    <button formaction="{{ url_for('ventas.finalizar') }}" formmethod="GET" class="btn btn-success">Finalizar venta</button>
+    
+    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalGuardarPendiente">
+        Guardar carrito
+    </button>
+</div>
+{% endif %}
+
+<!-- Modal para guardar carrito pendiente -->
+<div class="modal fade" id="modalGuardarPendiente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Guardar carrito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('ventas.guardar_pendiente') }}">
+                <div class="modal-body">
+                    <label>Nombre del carrito</label>
+                    <input name="nombre_carrito" class="form-control" placeholder="Ej: Cliente Juan - Pedido especial">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+{% if carritos_pendientes %}
+<h4>Carritos pendientes</h4>
+
+<div class="list-group">
+    {% for cp in carritos_pendientes %}
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-1">{{ cp.nombre }}</h6>
+            <small class="text-muted">{{ cp.fecha_creacion }} - Total: ${{ cp.total }}</small>
+        </div>
+        <div>
+            <a href="{{ url_for('ventas.cargar_pendiente', carrito_id=cp.id) }}" class="btn btn-sm btn-info">Cargar</a>
+            <a href="{{ url_for('ventas.eliminar_pendiente', carrito_id=cp.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro?')">Eliminar</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+// Validación de cantidad contra stock
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.querySelector("#searchProducto");
+    const cantidadInput = document.querySelector("input[name='cantidad']");
+    const stockWarning = document.querySelector("#stock-warning");
+    let stockDisponible = null;
+
+    if (input) {
+        input.addEventListener("change", () => {
+            // Cuando cambia el input, capturamos el stock disponible
+            const item = document.querySelector(`[data-stock]`);
+            if (item) {
+                stockDisponible = parseFloat(item.dataset.stock);
+            }
+        });
+    }
+
+    if (cantidadInput) {
+        cantidadInput.addEventListener("input", () => {
+            const cantidad = parseFloat(cantidadInput.value);
+            const hiddenId = document.querySelector("#producto_id_hidden").value;
+            
+            if (hiddenId && cantidad > 0) {
+                // Buscar el stock del producto seleccionado
+                fetch(`/productos/stock/${hiddenId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (cantidad > data.stock) {
+                            stockWarning.textContent = `⚠️ Stock insuficiente. Disponible: ${data.stock}`;
+                            stockWarning.classList.remove("d-none");
+                        } else {
+                            stockWarning.classList.add("d-none");
+                        }
+                    });
+            }
+        });
+    }
+});
+</script>
 
 {% endblock %}
