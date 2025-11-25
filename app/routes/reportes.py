@@ -265,7 +265,7 @@ def ganancias_netas():
 
     # Obtener ventas diarias y sus costos
     resultado = db.execute("""
-        SELECT 
+        SELECT
             substr(v.fecha,1,10) AS dia,
             SUM(v.total) AS venta_total,
             COALESCE(SUM(d.cantidad * COALESCE((
@@ -302,7 +302,7 @@ def top_proveedores():
     db = get_db()
 
     resultado = db.execute("""
-        SELECT 
+        SELECT
             pr.id,
             pr.nombre,
             COUNT(DISTINCT i.producto_id) AS cantidad_productos,

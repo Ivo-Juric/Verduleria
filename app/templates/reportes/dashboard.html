@@ -88,11 +88,11 @@ fetch("/reportes/ganancias_netas")
     .then(res => res.json())
     .then(data => {
         const ctxGanancias = document.getElementById("gananciasChart").getContext("2d");
-        
+
         const gananciaNeta = data.map(d => d.ganancia);
         const maxGanancia = Math.max(...gananciaNeta);
         const minGanancia = Math.min(...gananciaNeta);
-        
+
         new Chart(ctxGanancias, {
             type: "bar",
             data: {

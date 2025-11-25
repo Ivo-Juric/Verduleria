@@ -1,9 +1,17 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from db import get_db
 import datetime
+from datetime import timedelta
 from app.utils.auth_decorators import login_required
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/ventas")
+
+def get_adjusted_datetime():
+    """
+    Retorna la hora actual ajustada por -4 horas (zona Argentina UTC-3).
+    El servidor está en USA West (UTC-7), así que restamos 4 horas.
+    """
+    return datetime.datetime.now() - timedelta(hours=4)
 
 @ventas_bp.route("/nueva", methods=["GET", "POST"])
 @login_required
@@ -92,7 +100,7 @@ def guardar_pendiente():
         flash("Carrito vacío", "warning")
         return redirect(url_for("ventas.nueva"))
 
-    nombre_carrito = request.form.get("nombre_carrito", f"Carrito {datetime.datetime.now().strftime('%d/%m %H:%M')}")
+    nombre_carrito = request.form.get("nombre_carrito", f"Carrito {get_adjusted_datetime().strftime('%d/%m %H:%M')}")
     total = sum(i["subtotal"] for i in carrito)
 
     db = get_db()
@@ -100,7 +108,7 @@ def guardar_pendiente():
     cur.execute("""
         INSERT INTO carritos_pendientes (usuario_id, nombre, total, fecha_creacion)
         VALUES (?, ?, ?, ?)
-    """, (session.get("user_id"), nombre_carrito, total, datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
+    """, (session.get("user_id"), nombre_carrito, total, get_adjusted_datetime().strftime("%Y-%m-%d %H:%M")))
     carrito_id = cur.lastrowid
 
     for i in carrito:
@@ -204,7 +212,7 @@ def finalizar():
             return redirect(url_for("ventas.finalizar"))
 
         # Crear venta
-        fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        fecha = get_adjusted_datetime().strftime("%Y-%m-%d %H:%M")
         cur = db.cursor()
         cur.execute("INSERT INTO ventas(fecha, total) VALUES (?, ?)", (fecha, total))
         venta_id = cur.lastrowid
