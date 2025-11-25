@@ -101,59 +101,79 @@ def delete(id):
 @login_required
 def gestionar_stock(id):
     db = get_db()
-    
+
     producto = db.execute("SELECT * FROM productos WHERE id=?", (id,)).fetchone()
     proveedores = db.execute("SELECT * FROM proveedores ORDER BY nombre").fetchall()
-    
+
     if request.method == "POST":
         cantidad = float(request.form["cantidad"])
         proveedor_id = request.form["proveedor_id"]
         precio_unitario = request.form.get("precio_unitario", "0")
-        
+
         try:
             precio_unitario = float(precio_unitario) if precio_unitario else None
         except ValueError:
             precio_unitario = None
-        
+
         # Registrar ingreso de stock
         db.execute("""
             INSERT INTO ingresos_stock (producto_id, proveedor_id, cantidad, fecha, precio_unitario)
             VALUES (?, ?, ?, datetime('now', 'localtime'), ?)
         """, (id, proveedor_id, cantidad, precio_unitario))
-        
+
         # Actualizar stock del producto
         db.execute("""
             UPDATE productos
             SET stock = stock + ?
             WHERE id=?
         """, (cantidad, id))
-        
+
         db.commit()
-        
+
         proveedor = db.execute("SELECT nombre FROM proveedores WHERE id=?", (proveedor_id,)).fetchone()
         flash(f"Stock ingresado: +{cantidad} unidades de {proveedor['nombre']}", "success")
         return redirect(url_for("productos.lista"))
-    
-    return render_template("productos/gestionar_stock.html", 
+
+    return render_template("productos/gestionar_stock.html",
                            producto=producto,
                            proveedores=proveedores)
 @productos_bp.route("/autocomplete")
 @login_required
 def autocomplete():
-    q = request.args.get("q", "")
+    q = request.args.get("q", "").strip()
     db = get_db()
 
-    rows = db.execute("""
-        SELECT
-            p.id,
-            p.nombre,
-            p.precio,
-            u.nombre AS unidad
-        FROM productos p
-        LEFT JOIN unidades u ON p.unidad_id = u.id
-        WHERE p.nombre LIKE ?
-        LIMIT 10
-    """, (f"%{q}%",)).fetchall()
+    # Intenta buscar por ID primero si es un número
+    rows = []
+    try:
+        producto_id = int(q)
+        rows = db.execute("""
+            SELECT
+                p.id,
+                p.nombre,
+                p.precio,
+                u.nombre AS unidad
+            FROM productos p
+            LEFT JOIN unidades u ON p.unidad_id = u.id
+            WHERE p.id = ?
+            LIMIT 10
+        """, (producto_id,)).fetchall()
+    except ValueError:
+        pass
+    
+    # Si no encontró por ID o no es número, busca por nombre
+    if not rows:
+        rows = db.execute("""
+            SELECT
+                p.id,
+                p.nombre,
+                p.precio,
+                u.nombre AS unidad
+            FROM productos p
+            LEFT JOIN unidades u ON p.unidad_id = u.id
+            WHERE p.nombre LIKE ?
+            LIMIT 10
+        """, (f"%{q}%",)).fetchall()
 
     return jsonify([{
         "id": r["id"],

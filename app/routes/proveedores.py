@@ -10,7 +10,7 @@ proveedores_bp = Blueprint("proveedores", __name__, url_prefix="/proveedores")
 def lista():
     db = get_db()
     proveedores = db.execute("""
-        SELECT 
+        SELECT
             p.id,
             p.nombre,
             p.contacto,
@@ -79,16 +79,16 @@ def editar(id):
 @admin_required
 def delete(id):
     db = get_db()
-    
+
     # Verificar si tiene ingresos de stock
     ingreso = db.execute(
         "SELECT COUNT(*) FROM ingresos_stock WHERE proveedor_id=?", (id,)
     ).fetchone()[0]
-    
+
     if ingreso > 0:
         flash("No se puede eliminar: el proveedor tiene registros de compra", "danger")
         return redirect(url_for("proveedores.lista"))
-    
+
     db.execute("DELETE FROM proveedores WHERE id=?", (id,))
     db.commit()
     flash("Proveedor eliminado", "danger")
@@ -100,9 +100,9 @@ def delete(id):
 def ingresos(id):
     db = get_db()
     proveedor = db.execute("SELECT * FROM proveedores WHERE id=?", (id,)).fetchone()
-    
+
     ingresos_stock = db.execute("""
-        SELECT 
+        SELECT
             i.id,
             i.fecha,
             p.nombre AS producto,
@@ -117,6 +117,6 @@ def ingresos(id):
         ORDER BY i.fecha DESC
     """, (id,)).fetchall()
 
-    return render_template("proveedores/ingresos.html", 
-                           proveedor=proveedor, 
+    return render_template("proveedores/ingresos.html",
+                           proveedor=proveedor,
                            ingresos=ingresos_stock)
