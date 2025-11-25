@@ -188,7 +188,7 @@ def finalizar():
         return redirect(url_for("ventas.nueva"))
 
     total = sum(i["subtotal"] for i in carrito)
-    
+
     # Inicializar métodos de pago en sesión
     if "metodos_pago_session" not in session:
         session["metodos_pago_session"] = []
@@ -232,7 +232,7 @@ def finalizar():
 
         ticket = list(carrito)
         metodos_pago_ticket = list(metodos_pago)
-        
+
         session["carrito"] = []
         session["metodos_pago_session"] = []
         session.modified = True
@@ -242,14 +242,14 @@ def finalizar():
                                fecha=fecha,
                                total=total,
                                metodos_pago=metodos_pago_ticket)
-    
+
     else:
         # GET: mostrar formulario de métodos de pago
         metodos = db.execute("SELECT * FROM metodos_pago ORDER BY nombre").fetchall()
         metodos_pago_session = session.get("metodos_pago_session", [])
         monto_pagado = sum(m["monto"] for m in metodos_pago_session)
         falta_pagar = total - monto_pagado
-        
+
         return render_template("ventas/metodos_pago.html",
                                carrito=carrito,
                                total=total,
@@ -263,26 +263,26 @@ def finalizar():
 def agregar_metodo_pago():
     metodo_nombre = request.form.get("metodo")
     monto = request.form.get("monto", "0")
-    
+
     try:
         monto = float(monto)
     except ValueError:
         flash("Monto inválido", "danger")
         return redirect(url_for("ventas.finalizar"))
-    
+
     if monto <= 0:
         flash("El monto debe ser mayor a 0", "danger")
         return redirect(url_for("ventas.finalizar"))
-    
+
     if "metodos_pago_session" not in session:
         session["metodos_pago_session"] = []
-    
+
     session["metodos_pago_session"].append({
         "metodo": metodo_nombre,
         "monto": monto
     })
     session.modified = True
-    
+
     flash(f"Método de pago agregado: {metodo_nombre} - ${monto}", "success")
     return redirect(url_for("ventas.finalizar"))
 
