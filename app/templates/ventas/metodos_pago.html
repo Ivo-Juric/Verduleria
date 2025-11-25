@@ -38,8 +38,8 @@
         <div class="col-md-6">
             <div class="card p-3">
                 <label class="form-label"><strong>{{ metodo.nombre }}</strong></label>
-                <input type="number" step="0.01" min="0" max="{{ total }}" 
-                       name="monto_{{ metodo.nombre }}" class="form-control montoInput" 
+                <input type="number" step="0.01" min="0" max="{{ total }}"
+                       name="monto_{{ metodo.nombre }}" class="form-control montoInput"
                        placeholder="0.00" value="0">
             </div>
         </div>
@@ -59,7 +59,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const total = {{ total }};
+    const total = parseFloat("{{ total }}");
     const inputs = document.querySelectorAll(".montoInput");
     const totalIngresadoEl = document.querySelector("#totalIngresado");
     const diferenciaEl = document.querySelector("#diferencia");

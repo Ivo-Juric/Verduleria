@@ -66,8 +66,8 @@
 
 {% if carrito %}
 <div class="mb-3">
-    <button formaction="{{ url_for('ventas.finalizar') }}" formmethod="GET" class="btn btn-success">Finalizar venta</button>
-    
+    <a href="{{ url_for('ventas.finalizar') }}" class="btn btn-success">Finalizar venta</a>
+
     <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalGuardarPendiente">
         Guardar carrito
     </button>
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
         cantidadInput.addEventListener("input", () => {
             const cantidad = parseFloat(cantidadInput.value);
             const hiddenId = document.querySelector("#producto_id_hidden").value;
-            
+
             if (hiddenId && cantidad > 0) {
                 // Buscar el stock del producto seleccionado
                 fetch(`/productos/stock/${hiddenId}`)

@@ -9,7 +9,7 @@ ventas_bp = Blueprint("ventas", __name__, url_prefix="/ventas")
 @login_required
 def nueva():
     db = get_db()
-    
+
     if "carrito" not in session:
         session["carrito"] = []
 
@@ -61,7 +61,7 @@ def nueva():
         flash(f"Producto agregado: {producto['nombre']}", "success")
 
     total = sum(i["subtotal"] for i in session.get("carrito", []))
-    
+
     # Obtener carritos pendientes del usuario
     carritos_pendientes = db.execute("""
         SELECT id, nombre, total, fecha_creacion
@@ -94,7 +94,7 @@ def guardar_pendiente():
 
     nombre_carrito = request.form.get("nombre_carrito", f"Carrito {datetime.datetime.now().strftime('%d/%m %H:%M')}")
     total = sum(i["subtotal"] for i in carrito)
-    
+
     db = get_db()
     cur = db.cursor()
     cur.execute("""
@@ -110,7 +110,7 @@ def guardar_pendiente():
         """, (carrito_id, i["producto_id"], i["cantidad"], i["subtotal"]))
 
     db.commit()
-    
+
     session["carrito"] = []
     session.modified = True
     flash(f"Carrito guardado como '{nombre_carrito}'", "success")
@@ -120,17 +120,17 @@ def guardar_pendiente():
 @login_required
 def cargar_pendiente(carrito_id):
     db = get_db()
-    
+
     # Verificar que el carrito pertenece al usuario
     carrito = db.execute("""
         SELECT * FROM carritos_pendientes
         WHERE id = ? AND usuario_id = ?
     """, (carrito_id, session.get("user_id"))).fetchone()
-    
+
     if not carrito:
         flash("Carrito no encontrado", "danger")
         return redirect(url_for("ventas.nueva"))
-    
+
     # Cargar detalles
     detalles = db.execute("""
         SELECT dc.producto_id, dc.cantidad, dc.subtotal, p.nombre, p.precio, p.stock, u.nombre as unidad
@@ -139,7 +139,7 @@ def cargar_pendiente(carrito_id):
         LEFT JOIN unidades u ON p.unidad_id = u.id
         WHERE dc.carrito_id = ?
     """, (carrito_id,)).fetchall()
-    
+
     session["carrito"] = []
     for detalle in detalles:
         session["carrito"].append({
@@ -152,7 +152,7 @@ def cargar_pendiente(carrito_id):
             "unidad": detalle["unidad"] or ""
         })
     session.modified = True
-    
+
     flash(f"Carrito '{carrito['nombre']}' cargado", "info")
     return redirect(url_for("ventas.nueva"))
 
@@ -160,20 +160,20 @@ def cargar_pendiente(carrito_id):
 @login_required
 def eliminar_pendiente(carrito_id):
     db = get_db()
-    
+
     carrito = db.execute("""
         SELECT * FROM carritos_pendientes
         WHERE id = ? AND usuario_id = ?
     """, (carrito_id, session.get("user_id"))).fetchone()
-    
+
     if not carrito:
         flash("Carrito no encontrado", "danger")
         return redirect(url_for("ventas.nueva"))
-    
+
     db.execute("DELETE FROM detalle_carritos WHERE carrito_id = ?", (carrito_id,))
     db.execute("DELETE FROM carritos_pendientes WHERE id = ?", (carrito_id,))
     db.commit()
-    
+
     flash("Carrito eliminado", "info")
     return redirect(url_for("ventas.nueva"))
 
@@ -249,7 +249,7 @@ def finalizar():
                                fecha=fecha,
                                total=total,
                                metodos_pago=metodos_pago)
-    
+
     else:
         # GET: mostrar formulario de métodos de pago
         total = sum(i["subtotal"] for i in carrito)
