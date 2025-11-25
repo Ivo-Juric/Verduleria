@@ -187,31 +187,21 @@ def finalizar():
         flash("Carrito vacío", "warning")
         return redirect(url_for("ventas.nueva"))
 
-    if request.method == "POST":
-        # Procesar métodos de pago
-        total = sum(i["subtotal"] for i in carrito)
-        metodos_pago = {}
-        monto_total_pago = 0
+    total = sum(i["subtotal"] for i in carrito)
+    
+    # Inicializar métodos de pago en sesión
+    if "metodos_pago_session" not in session:
+        session["metodos_pago_session"] = []
 
-        # Recopilar métodos de pago
-        for metodo in ["Efectivo", "Transferencia", "QR", "Tarjeta de Débito"]:
-            monto = request.form.get(f"monto_{metodo}", "0")
-            try:
-                monto = float(monto)
-                if monto > 0:
-                    metodos_pago[metodo] = monto
-                    monto_total_pago += monto
-            except ValueError:
-                pass
+    if request.method == "POST":
+        # Procesar pago final
+        metodos_pago = session.get("metodos_pago_session", [])
+        monto_total_pago = sum(m["monto"] for m in metodos_pago)
 
         # Validar que el total pagado coincida
         if abs(monto_total_pago - total) > 0.01:
             flash(f"El monto total no coincide. Total: ${total}, Pagado: ${monto_total_pago}", "danger")
-            metodos = db.execute("SELECT * FROM metodos_pago ORDER BY nombre").fetchall()
-            return render_template("ventas/metodos_pago.html",
-                                   carrito=carrito,
-                                   total=total,
-                                   metodos=metodos)
+            return redirect(url_for("ventas.finalizar"))
 
         # Crear venta
         fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -230,31 +220,77 @@ def finalizar():
             cur.execute("UPDATE productos SET stock = stock - ? WHERE id=?", (i["cantidad"], i["producto_id"]))
 
         # Registrar métodos de pago
-        for metodo_nombre, monto in metodos_pago.items():
-            metodo = db.execute("SELECT id FROM metodos_pago WHERE nombre = ?", (metodo_nombre,)).fetchone()
+        for pago in metodos_pago:
+            metodo = db.execute("SELECT id FROM metodos_pago WHERE nombre = ?", (pago["metodo"],)).fetchone()
             if metodo:
                 cur.execute("""
                     INSERT INTO detalle_pago (venta_id, metodo_id, monto)
                     VALUES (?, ?, ?)
-                """, (venta_id, metodo["id"], monto))
+                """, (venta_id, metodo["id"], pago["monto"]))
 
         db.commit()
 
         ticket = list(carrito)
+        metodos_pago_ticket = list(metodos_pago)
+        
         session["carrito"] = []
+        session["metodos_pago_session"] = []
         session.modified = True
 
         return render_template("ventas/ticket.html",
                                ticket=ticket,
                                fecha=fecha,
                                total=total,
-                               metodos_pago=metodos_pago)
-
+                               metodos_pago=metodos_pago_ticket)
+    
     else:
         # GET: mostrar formulario de métodos de pago
-        total = sum(i["subtotal"] for i in carrito)
         metodos = db.execute("SELECT * FROM metodos_pago ORDER BY nombre").fetchall()
+        metodos_pago_session = session.get("metodos_pago_session", [])
+        monto_pagado = sum(m["monto"] for m in metodos_pago_session)
+        falta_pagar = total - monto_pagado
+        
         return render_template("ventas/metodos_pago.html",
                                carrito=carrito,
                                total=total,
-                               metodos=metodos)
+                               metodos=metodos,
+                               metodos_pago_session=metodos_pago_session,
+                               monto_pagado=monto_pagado,
+                               falta_pagar=falta_pagar)
+
+@ventas_bp.route("/agregar_metodo_pago", methods=["POST"])
+@login_required
+def agregar_metodo_pago():
+    metodo_nombre = request.form.get("metodo")
+    monto = request.form.get("monto", "0")
+    
+    try:
+        monto = float(monto)
+    except ValueError:
+        flash("Monto inválido", "danger")
+        return redirect(url_for("ventas.finalizar"))
+    
+    if monto <= 0:
+        flash("El monto debe ser mayor a 0", "danger")
+        return redirect(url_for("ventas.finalizar"))
+    
+    if "metodos_pago_session" not in session:
+        session["metodos_pago_session"] = []
+    
+    session["metodos_pago_session"].append({
+        "metodo": metodo_nombre,
+        "monto": monto
+    })
+    session.modified = True
+    
+    flash(f"Método de pago agregado: {metodo_nombre} - ${monto}", "success")
+    return redirect(url_for("ventas.finalizar"))
+
+@ventas_bp.route("/quitar_metodo_pago/<int:idx>")
+@login_required
+def quitar_metodo_pago(idx):
+    if "metodos_pago_session" in session and 0 <= idx < len(session["metodos_pago_session"]):
+        session["metodos_pago_session"].pop(idx)
+        session.modified = True
+        flash("Método de pago removido", "info")
+    return redirect(url_for("ventas.finalizar"))

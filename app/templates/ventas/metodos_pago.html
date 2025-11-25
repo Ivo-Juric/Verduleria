@@ -26,72 +26,86 @@
 </tbody>
 </table>
 
-<h4>Total a pagar: <strong>${{ total }}</strong></h4>
+<div class="alert alert-info">
+    <strong>Total a pagar: ${{ total }}</strong>
+</div>
 
 <hr>
 
-<h4>Seleccionar métodos de pago</h4>
+<h4>Métodos de pago</h4>
 
-<form method="POST" action="{{ url_for('ventas.finalizar') }}" id="formPago">
-    <div class="row g-3">
-        {% for metodo in metodos %}
-        <div class="col-md-6">
-            <div class="card p-3">
-                <label class="form-label"><strong>{{ metodo.nombre }}</strong></label>
-                <input type="number" step="0.01" min="0" max="{{ total }}"
-                       name="monto_{{ metodo.nombre }}" class="form-control montoInput"
-                       placeholder="0.00" value="0">
-            </div>
-        </div>
-        {% endfor %}
+<form method="POST" action="{{ url_for('ventas.agregar_metodo_pago') }}" class="row g-3 mb-4">
+    <div class="col-md-5">
+        <label>Método de pago</label>
+        <select name="metodo" class="form-control" required>
+            <option value="">-- Seleccionar método --</option>
+            {% for metodo in metodos %}
+            <option value="{{ metodo.nombre }}">{{ metodo.nombre }}</option>
+            {% endfor %}
+        </select>
     </div>
 
-    <div class="mt-4">
-        <p>Monto total: <strong id="totalIngresado">$0.00</strong></p>
-        <p id="diferencia" class="text-warning d-none">Diferencia: <span id="montoDiferencia"></span></p>
+    <div class="col-md-5">
+        <label>Monto</label>
+        <input type="number" step="0.01" min="0.01" name="monto" class="form-control" placeholder="0.00" required>
     </div>
 
-    <div class="mt-4">
-        <a href="{{ url_for('ventas.nueva') }}" class="btn btn-secondary">Volver</a>
-        <button type="submit" class="btn btn-success" id="btnFinalizar">Finalizar venta</button>
+    <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">Agregar pago</button>
     </div>
 </form>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const total = parseFloat("{{ total }}");
-    const inputs = document.querySelectorAll(".montoInput");
-    const totalIngresadoEl = document.querySelector("#totalIngresado");
-    const diferenciaEl = document.querySelector("#diferencia");
-    const montoDiferenciaEl = document.querySelector("#montoDiferencia");
-    const btnFinalizar = document.querySelector("#btnFinalizar");
+<h5>Pagos registrados</h5>
 
-    function actualizarTotal() {
-        let suma = 0;
-        inputs.forEach(input => {
-            suma += parseFloat(input.value) || 0;
-        });
+{% if metodos_pago_session %}
+<table class="table table-sm table-bordered">
+<thead>
+<tr>
+    <th>Método</th>
+    <th>Monto</th>
+    <th></th>
+</tr>
+</thead>
+<tbody>
+{% for pago in metodos_pago_session %}
+<tr>
+    <td>{{ pago.metodo }}</td>
+    <td>${{ pago.monto }}</td>
+    <td>
+        <a href="{{ url_for('ventas.quitar_metodo_pago', idx=loop.index0) }}" class="btn btn-sm btn-danger">Quitar</a>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 
-        totalIngresadoEl.textContent = `$${suma.toFixed(2)}`;
+<div class="alert alert-warning">
+    <strong>Monto pagado: ${{ monto_pagado }}</strong><br>
+    {% if falta_pagar > 0.01 %}
+    <strong class="text-danger">Falta pagar: ${{ falta_pagar }}</strong>
+    {% elif falta_pagar < -0.01 %}
+    <strong class="text-danger">Excedente: ${{ -falta_pagar }}</strong>
+    {% else %}
+    <strong class="text-success">✓ Monto correcto</strong>
+    {% endif %}
+</div>
 
-        const diferencia = Math.abs(suma - total);
-        if (Math.abs(suma - total) > 0.01) {
-            diferenciaEl.classList.remove("d-none");
-            montoDiferenciaEl.textContent = `$${diferencia.toFixed(2)}`;
-            btnFinalizar.disabled = true;
-        } else {
-            diferenciaEl.classList.add("d-none");
-            btnFinalizar.disabled = false;
-        }
-    }
+{% else %}
+<div class="alert alert-info">
+    No hay métodos de pago registrados. Agrega al menos uno.
+</div>
+{% endif %}
 
-    inputs.forEach(input => {
-        input.addEventListener("input", actualizarTotal);
-    });
-
-    // Inicializar
-    actualizarTotal();
-});
-</script>
+<div class="mt-4">
+    <a href="{{ url_for('ventas.nueva') }}" class="btn btn-secondary">Volver</a>
+    
+    {% if falta_pagar <= 0.01 %}
+    <form method="POST" class="d-inline">
+        <button type="submit" class="btn btn-success">Finalizar venta</button>
+    </form>
+    {% else %}
+    <button class="btn btn-success" disabled title="Completa el pago total">Finalizar venta</button>
+    {% endif %}
+</div>
 
 {% endblock %}
