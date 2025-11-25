@@ -5,6 +5,7 @@ from app.routes.reportes import reportes_bp
 from app.routes.auth import auth_bp
 from app.routes.usuarios import usuarios_bp
 from app.routes.admin import admin_bp
+from app.routes.proveedores import proveedores_bp
 from db import close_db
 
 def create_app():
@@ -18,6 +19,7 @@ def create_app():
     app.register_blueprint(reportes_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(usuarios_bp)
+    app.register_blueprint(proveedores_bp)
 
     @app.route("/")
     def index():

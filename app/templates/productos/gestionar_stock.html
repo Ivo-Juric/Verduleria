@@ -12,7 +12,15 @@
         <input name="cantidad" class="form-control mb-2" type="number" step="0.01" required>
 
         <label>Proveedor</label>
-        <input name="proveedor" class="form-control mb-3" placeholder="Nombre del proveedor" required>
+        <select name="proveedor_id" class="form-control mb-2" required>
+            <option value="">-- Seleccionar proveedor --</option>
+            {% for p in proveedores %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Precio unitario (opcional)</label>
+        <input name="precio_unitario" class="form-control mb-3" type="number" step="0.01" placeholder="Dejar vacío si no se conoce">
 
         <button type="submit" class="btn btn-success">Ingresar Stock</button>
         <a href="/productos/" class="btn btn-secondary">Cancelar</a>

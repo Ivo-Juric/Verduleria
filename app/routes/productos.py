@@ -101,26 +101,42 @@ def delete(id):
 @login_required
 def gestionar_stock(id):
     db = get_db()
-
+    
     producto = db.execute("SELECT * FROM productos WHERE id=?", (id,)).fetchone()
-
+    proveedores = db.execute("SELECT * FROM proveedores ORDER BY nombre").fetchall()
+    
     if request.method == "POST":
         cantidad = float(request.form["cantidad"])
-        proveedor = request.form["proveedor"]
-
+        proveedor_id = request.form["proveedor_id"]
+        precio_unitario = request.form.get("precio_unitario", "0")
+        
+        try:
+            precio_unitario = float(precio_unitario) if precio_unitario else None
+        except ValueError:
+            precio_unitario = None
+        
+        # Registrar ingreso de stock
+        db.execute("""
+            INSERT INTO ingresos_stock (producto_id, proveedor_id, cantidad, fecha, precio_unitario)
+            VALUES (?, ?, ?, datetime('now', 'localtime'), ?)
+        """, (id, proveedor_id, cantidad, precio_unitario))
+        
+        # Actualizar stock del producto
         db.execute("""
             UPDATE productos
             SET stock = stock + ?
             WHERE id=?
         """, (cantidad, id))
+        
         db.commit()
-
-        flash(f"Stock ingresado: +{cantidad} unidades de {proveedor}", "success")
+        
+        proveedor = db.execute("SELECT nombre FROM proveedores WHERE id=?", (proveedor_id,)).fetchone()
+        flash(f"Stock ingresado: +{cantidad} unidades de {proveedor['nombre']}", "success")
         return redirect(url_for("productos.lista"))
-
-    return render_template("productos/gestionar_stock.html", producto=producto)
-
-
+    
+    return render_template("productos/gestionar_stock.html", 
+                           producto=producto,
+                           proveedores=proveedores)
 @productos_bp.route("/autocomplete")
 @login_required
 def autocomplete():

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h3>Proveedores</h3>
+
+<a href="/proveedores/nuevo" class="btn btn-primary mb-3">Nuevo proveedor</a>
+
+<table class="table table-striped">
+<thead>
+<tr>
+    <th>Nombre</th>
+    <th>Contacto</th>
+    <th>Teléfono</th>
+    <th>Email</th>
+    <th>Compras</th>
+    <th></th>
+</tr>
+</thead>
+
+<tbody>
+{% for p in proveedores %}
+<tr>
+    <td>{{ p.nombre }}</td>
+    <td>{{ p.contacto or "-" }}</td>
+    <td>{{ p.telefono or "-" }}</td>
+    <td>{{ p.email or "-" }}</td>
+    <td>
+        <a href="/proveedores/{{ p.id }}/ingresos" class="badge bg-info">
+            {{ p.total_compras }}
+        </a>
+    </td>
+    <td>
+        <a class="btn btn-sm btn-warning" href="/proveedores/editar/{{ p.id }}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="/proveedores/delete/{{ p.id }}">Eliminar</a>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

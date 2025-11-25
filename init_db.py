@@ -112,9 +112,53 @@ def init_db():
     );
     """)
 
-    # --------------------------------------------------------------
+    # -----------------------
+    # Tabla proveedores
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS proveedores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE,
+        contacto TEXT,
+        telefono TEXT,
+        email TEXT
+    );
+    """)
+
+    # -----------------------
+    # Tabla ingresos de stock
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ingresos_stock (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        producto_id INTEGER NOT NULL,
+        proveedor_id INTEGER NOT NULL,
+        cantidad REAL NOT NULL,
+        fecha TEXT NOT NULL,
+        precio_unitario REAL,
+        FOREIGN KEY (producto_id) REFERENCES productos(id),
+        FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+    );
+    """)
+
+    # -----------------------
+    # Cargar proveedores de prueba
+    # -----------------------
+    cursor.execute("SELECT COUNT(*) FROM proveedores")
+    if cursor.fetchone()[0] == 0:
+        print("Cargando proveedores de prueba...")
+        cursor.executemany("""
+            INSERT INTO proveedores (nombre, contacto, telefono, email)
+            VALUES (?, ?, ?, ?)
+        """, [
+            ("Agrofresco SA", "Juan Pérez", "011-1234-5678", "juan@agrofresco.com"),
+            ("Verduras del Sur", "María García", "011-8765-4321", "maria@verdurassur.com"),
+            ("Distribuidora Central", "Carlos López", "011-5555-5555", "carlos@distcentral.com")
+        ])
+
+    # -----------------------
     # CARGA AUTOMÁTICA DE PRODUCTOS DE PRUEBA SOLO SI LA TABLA ESTÁ VACÍA
-    # --------------------------------------------------------------
+    # -----------------------
     cursor.execute("SELECT COUNT(*) FROM productos")
     if cursor.fetchone()[0] == 0:
         print("Cargando productos de prueba...")

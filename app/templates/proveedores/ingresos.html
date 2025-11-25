@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h3>Ingresos de {{ proveedor.nombre }}</h3>
+
+<a href="/proveedores/" class="btn btn-secondary mb-3">Volver</a>
+
+<table class="table table-striped">
+<thead>
+<tr>
+    <th>Fecha</th>
+    <th>Producto</th>
+    <th>Cantidad</th>
+    <th>Unidad</th>
+    <th>Precio Unitario</th>
+    <th>Total</th>
+</tr>
+</thead>
+
+<tbody>
+{% if ingresos %}
+    {% for i in ingresos %}
+    <tr>
+        <td>{{ i.fecha }}</td>
+        <td>{{ i.producto }}</td>
+        <td>{{ i.cantidad }}</td>
+        <td>{{ i.unidad or "-" }}</td>
+        <td>${{ i.precio_unitario or "-" }}</td>
+        <td>${{ i.total or "-" }}</td>
+    </tr>
+    {% endfor %}
+{% else %}
+    <tr>
+        <td colspan="6" class="text-center">No hay ingresos registrados</td>
+    </tr>
+{% endif %}
+</tbody>
+</table>
+{% endblock %}
