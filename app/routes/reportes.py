@@ -24,7 +24,7 @@ def _build_ventas_query(args, limit=200):
     params = []
 
     # Apply filters using EXISTS on detalle_ventas/products
-    if prod_ids or cat_ids or uni_ids or precio_min or precio_max:
+    if prod_ids or cat_ids or uni_ids:
         sql += " WHERE EXISTS (SELECT 1 FROM detalle_ventas d JOIN productos p ON d.producto_id = p.id WHERE d.venta_id = v.id"
         conds = []
         if prod_ids:
@@ -39,7 +39,6 @@ def _build_ventas_query(args, limit=200):
             placeholders = ",".join(["?" for _ in uni_ids])
             conds.append(f"p.unidad_id IN ({placeholders})")
             params.extend(uni_ids)
-        # (No aplicar aquí el filtro de precio por venta; lo haremos sobre v.total más abajo)
 
         if conds:
             sql += " AND (" + " OR ".join(conds) + ")"
@@ -61,6 +60,7 @@ def _build_ventas_query(args, limit=200):
         where.append("v.total <= ?")
         params.append(precio_max)
 
+    # Agregar condiciones de WHERE correctamente
     if where:
         if "WHERE EXISTS" in sql:
             sql += " AND " + " AND ".join(where)
