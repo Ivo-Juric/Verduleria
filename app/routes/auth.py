@@ -26,23 +26,3 @@ def login():
 def logout():
     session.clear()
     return redirect("/")
-
-@auth_bp.route("/register", methods=["GET", "POST"])
-@admin_required
-def register():
-    if request.method == "POST":
-        u = request.form["username"]
-        p = request.form["password"]
-        r = request.form.get("role", "user")
-
-        db = get_db()
-        try:
-            db.execute("INSERT INTO usuarios(username, password_hash, role) VALUES (?, ?, ?)",
-                       (u, hash_pass(p), r))
-            db.commit()
-            flash("Usuario creado correctamente", "success")
-            return redirect(url_for("admin.users"))
-        except Exception as e:
-            flash("Error: ese usuario ya existe", "danger")
-
-    return render_template("auth/register.html")

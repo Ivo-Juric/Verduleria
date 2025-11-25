@@ -97,6 +97,30 @@ def delete(id):
     return redirect(url_for("productos.lista"))
 
 
+@productos_bp.route("/stock/<int:id>", methods=["GET", "POST"])
+@login_required
+def gestionar_stock(id):
+    db = get_db()
+
+    producto = db.execute("SELECT * FROM productos WHERE id=?", (id,)).fetchone()
+
+    if request.method == "POST":
+        cantidad = float(request.form["cantidad"])
+        proveedor = request.form["proveedor"]
+
+        db.execute("""
+            UPDATE productos
+            SET stock = stock + ?
+            WHERE id=?
+        """, (cantidad, id))
+        db.commit()
+
+        flash(f"Stock ingresado: +{cantidad} unidades de {proveedor}", "success")
+        return redirect(url_for("productos.lista"))
+
+    return render_template("productos/gestionar_stock.html", producto=producto)
+
+
 @productos_bp.route("/autocomplete")
 @login_required
 def autocomplete():

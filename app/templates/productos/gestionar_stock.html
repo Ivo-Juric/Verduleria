@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h3>Gestionar Stock - {{ producto.nombre }}</h3>
+
+<div class="card p-3 shadow-sm" style="max-width:500px;">
+    <div class="mb-3">
+        <p><strong>Stock actual:</strong> {{ producto.stock }} unidades</p>
+    </div>
+
+    <form method="POST">
+        <label>Cantidad a ingresar</label>
+        <input name="cantidad" class="form-control mb-2" type="number" step="0.01" required>
+
+        <label>Proveedor</label>
+        <input name="proveedor" class="form-control mb-3" placeholder="Nombre del proveedor" required>
+
+        <button type="submit" class="btn btn-success">Ingresar Stock</button>
+        <a href="/productos/" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
