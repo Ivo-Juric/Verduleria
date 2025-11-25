@@ -1,49 +1,168 @@
 {% extends "base.html" %}
 {% block contenido %}
 
-<h3>Dashboard</h3>
+<h2>Dashboard</h2>
+<hr>
 
 <div class="row">
-    <div class="col-md-8">
+    <!-- Gráfico de Ventas -->
+    <div class="col-lg-6">
         <div class="card p-3 shadow-sm mb-3">
+            <h5>Ventas Diarias</h5>
             <canvas id="ventasChart"></canvas>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card p-3 shadow-sm">
-            <h5>Top productos</h5>
+    <!-- Top Productos -->
+    <div class="col-lg-6">
+        <div class="card p-3 shadow-sm mb-3">
+            <h5>Top Productos Vendidos</h5>
             <ul id="topList" class="list-group"></ul>
         </div>
     </div>
 </div>
 
+<div class="row">
+    <!-- Ganancias Netas -->
+    <div class="col-lg-6">
+        <div class="card p-3 shadow-sm mb-3">
+            <h5>Ganancias Netas Diarias</h5>
+            <canvas id="gananciasChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Proveedores Más Baratos -->
+    <div class="col-lg-6">
+        <div class="card p-3 shadow-sm mb-3">
+            <h5>Top Proveedores Más Baratos</h5>
+            <ul id="topProveedoresList" class="list-group"></ul>
+        </div>
+    </div>
+</div>
+
 <script>
+// Cargar datos de ventas y productos
 fetch("/reportes/data")
     .then(res => res.json())
     .then(data => {
-        const ctx = document.getElementById("ventasChart");
-
-        new Chart(ctx, {
+        // Gráfico de Ventas
+        const ctxVentas = document.getElementById("ventasChart").getContext("2d");
+        new Chart(ctxVentas, {
             type: "line",
             data: {
                 labels: data.ventas.map(v => v.dia),
                 datasets: [{
-                    label: "Ventas",
+                    label: "Ventas ($)",
                     data: data.ventas.map(v => v.total),
-                    borderWidth: 2
+                    borderColor: "#28a745",
+                    backgroundColor: "rgba(40, 167, 69, 0.1)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
                 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
             }
         });
 
+        // Top Productos
         const lista = document.getElementById("topList");
         data.top.forEach(t => {
             lista.innerHTML += `
                 <li class="list-group-item d-flex justify-content-between">
-                    ${t.nombre}
-                    <span class="badge bg-primary">${t.cantidad}</span>
+                    <span>${t.nombre}</span>
+                    <span class="badge bg-primary">${t.cantidad} unidades</span>
                 </li>`;
         });
+    });
+
+// Cargar datos de ganancias netas
+fetch("/reportes/ganancias_netas")
+    .then(res => res.json())
+    .then(data => {
+        const ctxGanancias = document.getElementById("gananciasChart").getContext("2d");
+        
+        const gananciaNeta = data.map(d => d.ganancia);
+        const maxGanancia = Math.max(...gananciaNeta);
+        const minGanancia = Math.min(...gananciaNeta);
+        
+        new Chart(ctxGanancias, {
+            type: "bar",
+            data: {
+                labels: data.map(d => d.dia),
+                datasets: [
+                    {
+                        label: "Venta",
+                        data: data.map(d => d.venta),
+                        backgroundColor: "rgba(40, 167, 69, 0.7)",
+                        borderColor: "#28a745",
+                        borderWidth: 1
+                    },
+                    {
+                        label: "Costo",
+                        data: data.map(d => d.costo),
+                        backgroundColor: "rgba(220, 53, 69, 0.7)",
+                        borderColor: "#dc3545",
+                        borderWidth: 1
+                    },
+                    {
+                        label: "Ganancia Neta",
+                        data: gananciaNeta,
+                        backgroundColor: gananciaNeta.map(g => g >= 0 ? "rgba(0, 123, 255, 0.7)" : "rgba(255, 193, 7, 0.7)"),
+                        borderColor: "#007bff",
+                        borderWidth: 1,
+                        yAxisID: "y1"
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: "Monto ($)" }
+                    },
+                    y1: {
+                        type: "linear",
+                        position: "right",
+                        title: { display: true, text: "Ganancia Neta ($)" },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+
+// Cargar top proveedores más baratos
+fetch("/reportes/top_proveedores")
+    .then(res => res.json())
+    .then(data => {
+        const listaProveedores = document.getElementById("topProveedoresList");
+        if (data.length === 0) {
+            listaProveedores.innerHTML = '<li class="list-group-item text-muted">Sin datos</li>';
+        } else {
+            data.forEach(p => {
+                listaProveedores.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${p.nombre}</strong>
+                            <br>
+                            <small class="text-muted">${p.cantidad_productos} productos</small>
+                        </div>
+                        <span class="badge bg-success">$${p.precio_promedio.toFixed(2)}</span>
+                    </li>`;
+            });
+        }
     });
 </script>
 

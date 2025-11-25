@@ -39,13 +39,7 @@ def _build_ventas_query(args, limit=200):
             placeholders = ",".join(["?" for _ in uni_ids])
             conds.append(f"p.unidad_id IN ({placeholders})")
             params.extend(uni_ids)
-        # Filtrar por precio unitario del producto
-        if precio_min:
-            conds.append("p.precio >= ?")
-            params.append(precio_min)
-        if precio_max:
-            conds.append("p.precio <= ?")
-            params.append(precio_max)
+        # (No aplicar aquí el filtro de precio por venta; lo haremos sobre v.total más abajo)
 
         if conds:
             sql += " AND (" + " OR ".join(conds) + ")"
@@ -58,6 +52,14 @@ def _build_ventas_query(args, limit=200):
     if fecha_hasta:
         where.append("date(substr(v.fecha,1,10)) <= date(?)")
         params.append(fecha_hasta)
+
+    # Filtrar por total de la venta
+    if precio_min:
+        where.append("v.total >= ?")
+        params.append(precio_min)
+    if precio_max:
+        where.append("v.total <= ?")
+        params.append(precio_max)
 
     if where:
         if "WHERE EXISTS" in sql:
@@ -90,75 +92,13 @@ def index():
     categorias = db.execute("SELECT id, nombre FROM categorias ORDER BY nombre").fetchall()
     unidades = db.execute("SELECT id, nombre FROM unidades ORDER BY nombre").fetchall()
 
-    # Leer filtros desde query params
-    fecha_desde = request.args.get("fecha_desde")
-    fecha_hasta = request.args.get("fecha_hasta")
-    prod_ids = request.args.getlist("producto")
-    cat_ids = request.args.getlist("categoria")
-    uni_ids = request.args.getlist("unidad")
-    precio_min = request.args.get("precio_min")
-    precio_max = request.args.get("precio_max")
-
-    # Base query
-    sql = "SELECT v.* FROM ventas v"
-    where = []
-    params = []
-
-    # Apply filters using EXISTS on detalle_ventas/products
-    if prod_ids or cat_ids or uni_ids or precio_min or precio_max:
-        sql += " WHERE EXISTS (SELECT 1 FROM detalle_ventas d JOIN productos p ON d.producto_id = p.id WHERE d.venta_id = v.id"
-        conds = []
-        if prod_ids:
-            placeholders = ",".join(["?" for _ in prod_ids])
-            conds.append(f"p.id IN ({placeholders})")
-            params.extend(prod_ids)
-        if cat_ids:
-            placeholders = ",".join(["?" for _ in cat_ids])
-            conds.append(f"p.categoria_id IN ({placeholders})")
-            params.extend(cat_ids)
-        if uni_ids:
-            placeholders = ",".join(["?" for _ in uni_ids])
-            conds.append(f"p.unidad_id IN ({placeholders})")
-            params.extend(uni_ids)
-        if precio_min:
-            conds.append("d.subtotal >= ?")
-            params.append(precio_min)
-        if precio_max:
-            conds.append("d.subtotal <= ?")
-            params.append(precio_max)
-
-        if conds:
-            sql += " AND (" + " OR ".join(conds) + ")"
-        sql += ")"
-
-    # Date filters
-    if fecha_desde:
-        where.append("date(substr(v.fecha,1,10)) >= date(?)")
-        params.append(fecha_desde)
-    if fecha_hasta:
-        where.append("date(substr(v.fecha,1,10)) <= date(?)")
-        params.append(fecha_hasta)
-
-    if where:
-        if "WHERE EXISTS" in sql:
-            sql += " AND " + " AND ".join(where)
-        else:
-            sql += " WHERE " + " AND ".join(where)
-
-    sql += " ORDER BY v.fecha DESC LIMIT 200"
+    # Construir la consulta usando helper centralizado (respeta todos los filtros)
+    sql, params, filtros = _build_ventas_query(request.args, limit=200)
 
     ventas = db.execute(sql, params).fetchall()
     return render_template("reportes/reportes.html", ventas=ventas,
                            productos=productos, categorias=categorias, unidades=unidades,
-                           filtros={
-                               "fecha_desde": fecha_desde,
-                               "fecha_hasta": fecha_hasta,
-                               "prod_ids": prod_ids,
-                               "cat_ids": cat_ids,
-                               "uni_ids": uni_ids,
-                               "precio_min": precio_min,
-                               "precio_max": precio_max
-                           })
+                           filtros=filtros)
 
 @reportes_bp.route("/export/pdf")
 @login_required
@@ -312,3 +252,75 @@ def data():
         "ventas": [{"dia": r["dia"], "total": r["total"]} for r in ventas],
         "top": [{"nombre": t["nombre"], "cantidad": t["cantidad"]} for t in top]
     })
+
+
+@reportes_bp.route("/ganancias_netas")
+@login_required
+def ganancias_netas():
+    """
+    Calcula ganancias netas diarias: total de ventas - costo total.
+    El costo se estima como: suma de (cantidad * precio_unitario_ingreso) para cada producto vendido.
+    """
+    db = get_db()
+
+    # Obtener ventas diarias y sus costos
+    resultado = db.execute("""
+        SELECT 
+            substr(v.fecha,1,10) AS dia,
+            SUM(v.total) AS venta_total,
+            COALESCE(SUM(d.cantidad * COALESCE((
+                SELECT AVG(i.precio_unitario)
+                FROM ingresos_stock i
+                WHERE i.producto_id = d.producto_id
+            ), 0)), 0) AS costo_total
+        FROM ventas v
+        LEFT JOIN detalle_ventas d ON v.id = d.venta_id
+        GROUP BY dia
+        ORDER BY dia ASC
+    """).fetchall()
+
+    data_list = []
+    for r in resultado:
+        ganancia = float(r["venta_total"] or 0) - float(r["costo_total"] or 0)
+        data_list.append({
+            "dia": r["dia"],
+            "venta": float(r["venta_total"] or 0),
+            "costo": float(r["costo_total"] or 0),
+            "ganancia": ganancia
+        })
+
+    return jsonify(data_list)
+
+
+@reportes_bp.route("/top_proveedores")
+@login_required
+def top_proveedores():
+    """
+    Retorna top 10 proveedores más baratos por producto.
+    Ordena por precio unitario promedio ascendente.
+    """
+    db = get_db()
+
+    resultado = db.execute("""
+        SELECT 
+            pr.id,
+            pr.nombre,
+            COUNT(DISTINCT i.producto_id) AS cantidad_productos,
+            AVG(i.precio_unitario) AS precio_promedio
+        FROM proveedores pr
+        LEFT JOIN ingresos_stock i ON pr.id = i.proveedor_id
+        GROUP BY pr.id, pr.nombre
+        ORDER BY precio_promedio ASC
+        LIMIT 10
+    """).fetchall()
+
+    data_list = [
+        {
+            "nombre": r["nombre"],
+            "cantidad_productos": r["cantidad_productos"],
+            "precio_promedio": float(r["precio_promedio"] or 0)
+        }
+        for r in resultado
+    ]
+
+    return jsonify(data_list)

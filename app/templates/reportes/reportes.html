@@ -23,47 +23,6 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-2">
-        <div class="col-md-4">
-            <label>Productos</label>
-            <div class="form-check">
-                {% for p in productos %}
-                <div>
-                    <input class="form-check-input" type="checkbox" name="producto" value="{{ p.id }}" id="prod{{ p.id }}"
-                    {% if p.id|string in filtros.prod_ids %}checked{% endif %}>
-                    <label class="form-check-label" for="prod{{ p.id }}">{{ p.nombre }}</label>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <label>Categorías</label>
-            <div class="form-check">
-                {% for c in categorias %}
-                <div>
-                    <input class="form-check-input" type="checkbox" name="categoria" value="{{ c.id }}" id="cat{{ c.id }}"
-                    {% if c.id|string in filtros.cat_ids %}checked{% endif %}>
-                    <label class="form-check-label" for="cat{{ c.id }}">{{ c.nombre }}</label>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <label>Unidades</label>
-            <div class="form-check">
-                {% for u in unidades %}
-                <div>
-                    <input class="form-check-input" type="checkbox" name="unidad" value="{{ u.id }}" id="uni{{ u.id }}"
-                    {% if u.id|string in filtros.uni_ids %}checked{% endif %}>
-                    <label class="form-check-label" for="uni{{ u.id }}">{{ u.nombre }}</label>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
     <div class="mt-3">
         <button class="btn btn-primary">Aplicar filtros</button>
         <a href="/reportes/" class="btn btn-secondary">Limpiar</a>
