@@ -113,6 +113,31 @@ def export_pdf():
     sql, params, _ = _build_ventas_query(request.args, limit=1000)
     ventas = db.execute(sql, params).fetchall()
 
+    # Obtener detalles de productos para cada venta
+    ventas_con_detalles = []
+    for venta in ventas:
+        detalles = db.execute("""
+            SELECT d.cantidad, p.nombre, u.nombre as unidad
+            FROM detalle_ventas d
+            JOIN productos p ON d.producto_id = p.id
+            LEFT JOIN unidades u ON p.unidad_id = u.id
+            WHERE d.venta_id = ?
+            ORDER BY p.nombre
+        """, (venta["id"],)).fetchall()
+
+        # Crear descripción de productos
+        descripcion_productos = ", ".join([
+            f"{d['nombre']} x{d['cantidad']}{' ' + d['unidad'] if d['unidad'] else ''}"
+            for d in detalles
+        ])
+
+        ventas_con_detalles.append({
+            "id": venta["id"],
+            "fecha": venta["fecha"],
+            "total": venta["total"],
+            "productos": descripcion_productos
+        })
+
     # Memoria
     mem = io.BytesIO()
     pdf = SimpleDocTemplate(mem, pagesize=letter)
@@ -125,27 +150,67 @@ def export_pdf():
     elementos.append(titulo)
     elementos.append(Spacer(1, 20))
 
+    # Información de filtros aplicados
+    filtros_info = []
+    if request.args.get("fecha_desde"):
+        filtros_info.append(f"Desde: {request.args.get('fecha_desde')}")
+    if request.args.get("fecha_hasta"):
+        filtros_info.append(f"Hasta: {request.args.get('fecha_hasta')}")
+    if request.args.get("precio_min"):
+        filtros_info.append(f"Precio mín: ${request.args.get('precio_min')}")
+    if request.args.get("precio_max"):
+        filtros_info.append(f"Precio máx: ${request.args.get('precio_max')}")
+
+    prod_ids = request.args.getlist("producto")
+    if prod_ids:
+        productos_nombres = db.execute(f"SELECT nombre FROM productos WHERE id IN ({','.join(['?']*len(prod_ids))})", prod_ids).fetchall()
+        if productos_nombres:
+            nombres = [p["nombre"] for p in productos_nombres]
+            filtros_info.append(f"Productos: {', '.join(nombres)}")
+
+    cat_ids = request.args.getlist("categoria")
+    if cat_ids:
+        categorias_nombres = db.execute(f"SELECT nombre FROM categorias WHERE id IN ({','.join(['?']*len(cat_ids))})", cat_ids).fetchall()
+        if categorias_nombres:
+            nombres = [c["nombre"] for c in categorias_nombres]
+            filtros_info.append(f"Categorías: {', '.join(nombres)}")
+
+    uni_ids = request.args.getlist("unidad")
+    if uni_ids:
+        unidades_nombres = db.execute(f"SELECT nombre FROM unidades WHERE id IN ({','.join(['?']*len(uni_ids))})", uni_ids).fetchall()
+        if unidades_nombres:
+            nombres = [u["nombre"] for u in unidades_nombres]
+            filtros_info.append(f"Unidades: {', '.join(nombres)}")
+
+    if filtros_info:
+        filtros_texto = "Filtros aplicados: " + " | ".join(filtros_info)
+        filtros_paragraph = Paragraph(f"<i>{filtros_texto}</i>", styles["Normal"])
+        elementos.append(filtros_paragraph)
+        elementos.append(Spacer(1, 10))
+
     # Encabezados de tabla
-    data = [["ID", "Fecha", "Total"]]
+    data = [["ID", "Fecha", "Productos", "Total"]]
 
     # Datos
-    for v in ventas:
+    for v in ventas_con_detalles:
         data.append([
             v["id"],
             v["fecha"],
+            v["productos"],
             f"${v['total']}"
         ])
 
     # Tabla
-    tabla = Table(data, colWidths=[60, 200, 100])
+    tabla = Table(data, colWidths=[40, 80, 300, 80])
 
     tabla.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("ALIGN", (2, 1), (2, -1), "LEFT"),  # Alinear productos a la izquierda
 
         # Bordes
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
