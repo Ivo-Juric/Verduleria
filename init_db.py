@@ -283,6 +283,38 @@ def init_db():
     );
     """)
 
+    # -----------------------
+    # Tabla ofertas (por tiempo limitado)
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ofertas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        descripcion TEXT,
+        fecha_inicio TEXT NOT NULL,  -- formato YYYY-MM-DD HH:MM
+        fecha_fin TEXT NOT NULL,     -- formato YYYY-MM-DD HH:MM
+        tipo_oferta TEXT NOT NULL,   -- 'individual_precio', 'individual_cantidad', 'conjunto_descuento'
+        activo INTEGER DEFAULT 1,    -- 1=activa, 0=inactiva
+        descuento_global REAL DEFAULT 0  -- para ofertas de conjunto (porcentaje 0-100)
+    );
+    """)
+
+    # -----------------------
+    # Tabla oferta_productos (relación oferta-producto con condiciones específicas)
+    # -----------------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS oferta_productos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oferta_id INTEGER NOT NULL,
+        producto_id INTEGER NOT NULL,
+        precio_oferta REAL,           -- precio fijo (para tipo 'individual_precio')
+        cantidad_minima INTEGER,      -- cantidad mínima requerida (para tipo 'individual_cantidad')
+        descuento_porcentaje REAL,    -- descuento específico (0-100, para tipos individuales o conjunto)
+        FOREIGN KEY (oferta_id) REFERENCES ofertas(id) ON DELETE CASCADE,
+        FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
     conn.close()
     print("Base de datos creada con datos de ejemplo.")

@@ -45,11 +45,23 @@
 <tbody>
 {% if carrito %}
     {% for item in carrito %}
-    <tr>
-        <td>{{item.nombre}}</td>
+    <tr {% if item.tiene_oferta %}class="table-warning"{% endif %}>
+        <td>
+            {{item.nombre}}
+            {% if item.tiene_oferta %}
+            <br><small class="text-success">{{item.descripcion_oferta}}</small>
+            {% endif %}
+        </td>
         <td>{{item.unidad or "-"}}</td>
         <td>{{item.cantidad}}</td>
-        <td>${{item.precio}}</td>
+        <td>
+            {% if item.tiene_oferta %}
+                <span class="text-decoration-line-through text-muted">${{item.precio_original}}</span><br>
+                <span class="text-success">${{item.precio}}</span>
+            {% else %}
+                ${{item.precio}}
+            {% endif %}
+        </td>
         <td>${{item.subtotal}}</td>
         <td><a href="{{ url_for('ventas.quitar', idx=loop.index0) }}" class="btn btn-sm btn-danger">Quitar</a></td>
     </tr>

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h2>Nueva Oferta</h2>
+
+<form method="POST" id="ofertaForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre *</label>
+                <input type="text" class="form-control" id="nombre" name="nombre" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="tipo_oferta" class="form-label">Tipo de Oferta *</label>
+                <select class="form-control" id="tipo_oferta" name="tipo_oferta" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="individual_precio">Precio Individual (precio fijo)</option>
+                    <option value="individual_cantidad">Por Cantidad Mínima</option>
+                    <option value="conjunto_descuento">Descuento en Conjunto</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="descuento_global_div" style="display: none;">
+                <label for="descuento_global" class="form-label">Descuento Global (%)</label>
+                <input type="number" class="form-control" id="descuento_global" name="descuento_global" min="0" max="100" step="0.1">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="fecha_inicio" class="form-label">Fecha Inicio *</label>
+                <input type="datetime-local" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="fecha_fin" class="form-label">Fecha Fin *</label>
+                <input type="datetime-local" class="form-control" id="fecha_fin" name="fecha_fin" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de productos - se muestra dinámicamente según el tipo -->
+    <div id="productos_section" style="display: none;">
+        <h4>Productos</h4>
+        <div id="productos_container">
+            <!-- Los productos se agregarán aquí dinámicamente -->
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" id="agregar_producto">Agregar Producto</button>
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Crear Oferta</button>
+        <a href="{{ url_for('ofertas.index') }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+<script>
+document.getElementById('tipo_oferta').addEventListener('change', function() {
+    const tipo = this.value;
+    const descuentoGlobalDiv = document.getElementById('descuento_global_div');
+    const productosSection = document.getElementById('productos_section');
+    const productosContainer = document.getElementById('productos_container');
+
+    // Reset
+    descuentoGlobalDiv.style.display = 'none';
+    productosSection.style.display = 'none';
+    productosContainer.innerHTML = '';
+
+    if (tipo === 'conjunto_descuento') {
+        descuentoGlobalDiv.style.display = 'block';
+        productosSection.style.display = 'block';
+        // Para conjunto, mostrar campo de descuento por producto
+    } else if (tipo === 'individual_precio' || tipo === 'individual_cantidad') {
+        productosSection.style.display = 'block';
+    }
+});
+
+let productoIndex = 0;
+
+document.getElementById('agregar_producto').addEventListener('click', function() {
+    const tipo = document.getElementById('tipo_oferta').value;
+    const container = document.getElementById('productos_container');
+
+    const productoDiv = document.createElement('div');
+    productoDiv.className = 'producto-item border p-3 mb-3';
+    productoDiv.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Producto</label>
+                <select class="form-control producto-select" name="producto_id[]" required>
+                    <option value="">Seleccionar producto...</option>
+                    {% for producto in productos %}
+                    <option value="{{ producto.id }}">{{ producto.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            ${tipo === 'individual_precio' ? `
+            <div class="col-md-3">
+                <label class="form-label">Precio Oferta ($)</label>
+                <input type="number" class="form-control" name="precio_oferta[]" step="0.01" min="0" required>
+            </div>
+            ` : ''}
+            ${tipo === 'individual_cantidad' ? `
+            <div class="col-md-3">
+                <label class="form-label">Cantidad Mínima</label>
+                <input type="number" class="form-control" name="cantidad_minima[]" min="1" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Descuento (%)</label>
+                <input type="number" class="form-control" name="descuento_porcentaje[]" min="0" max="100" step="0.1" required>
+            </div>
+            ` : ''}
+            ${tipo === 'conjunto_descuento' ? `
+            <div class="col-md-3">
+                <label class="form-label">Descuento (%)</label>
+                <input type="number" class="form-control" name="descuento_porcentaje[]" min="0" max="100" step="0.1" required>
+            </div>
+            ` : ''}
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-danger btn-sm eliminar-producto">Eliminar</button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(productoDiv);
+    productoIndex++;
+
+    // Event listener para eliminar
+    productoDiv.querySelector('.eliminar-producto').addEventListener('click', function() {
+        productoDiv.remove();
+    });
+});
+
+// Validación básica
+document.getElementById('ofertaForm').addEventListener('submit', function(e) {
+    const tipo = document.getElementById('tipo_oferta').value;
+    const productos = document.querySelectorAll('.producto-item');
+
+    if ((tipo === 'individual_precio' || tipo === 'individual_cantidad' || tipo === 'conjunto_descuento') && productos.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un producto a la oferta');
+    }
+});
+</script>
+
+{% endblock %}

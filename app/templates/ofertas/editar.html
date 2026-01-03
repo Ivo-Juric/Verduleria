@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h2>Editar Oferta</h2>
+
+<form method="POST" id="ofertaForm">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre *</label>
+                <input type="text" class="form-control" id="nombre" name="nombre" value="{{ oferta.nombre }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" rows="3">{{ oferta.descripcion }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="tipo_oferta" class="form-label">Tipo de Oferta *</label>
+                <select class="form-control" id="tipo_oferta" name="tipo_oferta" required>
+                    <option value="individual_precio" {{ 'selected' if oferta.tipo_oferta == 'individual_precio' }}>Precio Individual (precio fijo)</option>
+                    <option value="individual_cantidad" {{ 'selected' if oferta.tipo_oferta == 'individual_cantidad' }}>Por Cantidad Mínima</option>
+                    <option value="conjunto_descuento" {{ 'selected' if oferta.tipo_oferta == 'conjunto_descuento' }}>Descuento en Conjunto</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="descuento_global_div" style="{{ 'display: block;' if oferta.tipo_oferta == 'conjunto_descuento' else 'display: none;' }}">
+                <label for="descuento_global" class="form-label">Descuento Global (%)</label>
+                <input type="number" class="form-control" id="descuento_global" name="descuento_global" value="{{ oferta.descuento_global }}" min="0" max="100" step="0.1">
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="activo" name="activo" {{ 'checked' if oferta.activo }}>
+                    <label class="form-check-label" for="activo">
+                        Oferta Activa
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="fecha_inicio" class="form-label">Fecha Inicio *</label>
+                <input type="datetime-local" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ oferta.fecha_inicio.replace(' ', 'T') }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="fecha_fin" class="form-label">Fecha Fin *</label>
+                <input type="datetime-local" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ oferta.fecha_fin.replace(' ', 'T') }}" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de productos -->
+    <div id="productos_section" style="{{ 'display: block;' if oferta.tipo_oferta != 'conjunto_descuento' or 'display: none;' }}">
+        <h4>Productos</h4>
+        <div id="productos_container">
+            {% for prod_oferta in productos_oferta %}
+            <div class="producto-item border p-3 mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Producto</label>
+                        <select class="form-control producto-select" name="producto_id[]" required>
+                            <option value="">Seleccionar producto...</option>
+                            {% for producto in productos %}
+                            <option value="{{ producto.id }}" {{ 'selected' if producto.id == prod_oferta.producto_id }}>{{ producto.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if oferta.tipo_oferta == 'individual_precio' %}
+                    <div class="col-md-3">
+                        <label class="form-label">Precio Oferta ($)</label>
+                        <input type="number" class="form-control" name="precio_oferta[]" value="{{ prod_oferta.precio_oferta }}" step="0.01" min="0" required>
+                    </div>
+                    {% elif oferta.tipo_oferta == 'individual_cantidad' %}
+                    <div class="col-md-3">
+                        <label class="form-label">Cantidad Mínima</label>
+                        <input type="number" class="form-control" name="cantidad_minima[]" value="{{ prod_oferta.cantidad_minima }}" min="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Descuento (%)</label>
+                        <input type="number" class="form-control" name="descuento_porcentaje[]" value="{{ prod_oferta.descuento_porcentaje }}" min="0" max="100" step="0.1" required>
+                    </div>
+                    {% elif oferta.tipo_oferta == 'conjunto_descuento' %}
+                    <div class="col-md-3">
+                        <label class="form-label">Descuento (%)</label>
+                        <input type="number" class="form-control" name="descuento_porcentaje[]" value="{{ prod_oferta.descuento_porcentaje }}" min="0" max="100" step="0.1" required>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger btn-sm eliminar-producto">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" id="agregar_producto">Agregar Producto</button>
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Actualizar Oferta</button>
+        <a href="{{ url_for('ofertas.index') }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+<script>
+// Similar al script de nueva.html pero con productos pre-cargados
+document.getElementById('tipo_oferta').addEventListener('change', function() {
+    const tipo = this.value;
+    const descuentoGlobalDiv = document.getElementById('descuento_global_div');
+    const productosSection = document.getElementById('productos_section');
+
+    descuentoGlobalDiv.style.display = tipo === 'conjunto_descuento' ? 'block' : 'none';
+    productosSection.style.display = (tipo === 'individual_precio' || tipo === 'individual_cantidad' || tipo === 'conjunto_descuento') ? 'block' : 'none';
+});
+
+let productoIndex = {{ productos_oferta|length }};
+
+document.getElementById('agregar_producto').addEventListener('click', function() {
+    const tipo = document.getElementById('tipo_oferta').value;
+    const container = document.getElementById('productos_container');
+
+    const productoDiv = document.createElement('div');
+    productoDiv.className = 'producto-item border p-3 mb-3';
+    productoDiv.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Producto</label>
+                <select class="form-control producto-select" name="producto_id[]" required>
+                    <option value="">Seleccionar producto...</option>
+                    {% for producto in productos %}
+                    <option value="{{ producto.id }}">{{ producto.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            ${tipo === 'individual_precio' ? `
+            <div class="col-md-3">
+                <label class="form-label">Precio Oferta ($)</label>
+                <input type="number" class="form-control" name="precio_oferta[]" step="0.01" min="0" required>
+            </div>
+            ` : ''}
+            ${tipo === 'individual_cantidad' ? `
+            <div class="col-md-3">
+                <label class="form-label">Cantidad Mínima</label>
+                <input type="number" class="form-control" name="cantidad_minima[]" min="1" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Descuento (%)</label>
+                <input type="number" class="form-control" name="descuento_porcentaje[]" min="0" max="100" step="0.1" required>
+            </div>
+            ` : ''}
+            ${tipo === 'conjunto_descuento' ? `
+            <div class="col-md-3">
+                <label class="form-label">Descuento (%)</label>
+                <input type="number" class="form-control" name="descuento_porcentaje[]" min="0" max="100" step="0.1" required>
+            </div>
+            ` : ''}
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-danger btn-sm eliminar-producto">Eliminar</button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(productoDiv);
+    productoIndex++;
+
+    productoDiv.querySelector('.eliminar-producto').addEventListener('click', function() {
+        productoDiv.remove();
+    });
+});
+
+// Event listeners para eliminar productos existentes
+document.querySelectorAll('.eliminar-producto').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.closest('.producto-item').remove();
+    });
+});
+
+// Validación
+document.getElementById('ofertaForm').addEventListener('submit', function(e) {
+    const tipo = document.getElementById('tipo_oferta').value;
+    const productos = document.querySelectorAll('.producto-item');
+
+    if ((tipo === 'individual_precio' || tipo === 'individual_cantidad' || tipo === 'conjunto_descuento') && productos.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un producto a la oferta');
+    }
+});
+</script>
+
+{% endblock %}

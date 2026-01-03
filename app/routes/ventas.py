@@ -3,6 +3,7 @@ from db import get_db
 import datetime
 from datetime import timedelta
 from app.utils.auth_decorators import login_required
+from app.routes.productos import calcular_precio_con_oferta
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/ventas")
 
@@ -50,7 +51,10 @@ def nueva():
             flash(f"Stock insuficiente. Disponible: {producto['stock']}", "danger")
             return redirect(url_for("ventas.nueva"))
 
-        subtotal = producto["precio"] * cantidad
+        # Calcular precio con oferta aplicada
+        info_precio = calcular_precio_con_oferta(db, producto_id, cantidad)
+        precio_final = info_precio["precio_final"]
+        subtotal = precio_final * cantidad
 
         # Traer unidad
         unidad = db.execute("SELECT nombre FROM unidades WHERE id=?", (producto["unidad_id"],)).fetchone()
@@ -60,10 +64,14 @@ def nueva():
             "producto_id": producto_id,
             "nombre": producto["nombre"],
             "cantidad": cantidad,
-            "precio": producto["precio"],
+            "precio": precio_final,
+            "precio_original": info_precio["precio_original"],
             "subtotal": subtotal,
             "stock_disponible": producto["stock"],
-            "unidad": unidad_nombre
+            "unidad": unidad_nombre,
+            "tiene_oferta": info_precio["tipo_oferta"] is not None,
+            "descuento_aplicado": info_precio["descuento_aplicado"],
+            "descripcion_oferta": info_precio["descripcion_oferta"]
         })
         session.modified = True
         flash(f"Producto agregado: {producto['nombre']}", "success")
@@ -150,14 +158,23 @@ def cargar_pendiente(carrito_id):
 
     session["carrito"] = []
     for detalle in detalles:
+        # Recalcular precio con ofertas actuales
+        info_precio = calcular_precio_con_oferta(db, detalle["producto_id"], detalle["cantidad"])
+        precio_final = info_precio["precio_final"]
+        subtotal_actual = precio_final * detalle["cantidad"]
+
         session["carrito"].append({
             "producto_id": detalle["producto_id"],
             "nombre": detalle["nombre"],
             "cantidad": detalle["cantidad"],
-            "precio": detalle["precio"],
-            "subtotal": detalle["subtotal"],
+            "precio": precio_final,
+            "precio_original": info_precio["precio_original"],
+            "subtotal": subtotal_actual,
             "stock_disponible": detalle["stock"],
-            "unidad": detalle["unidad"] or ""
+            "unidad": detalle["unidad"] or "",
+            "tiene_oferta": info_precio["tipo_oferta"] is not None,
+            "descuento_aplicado": info_precio["descuento_aplicado"],
+            "descripcion_oferta": info_precio["descripcion_oferta"]
         })
     session.modified = True
 

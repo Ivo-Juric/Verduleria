@@ -1,8 +1,74 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from db import get_db
 from app.utils.auth_decorators import login_required
+from datetime import datetime
 
 productos_bp = Blueprint("productos", __name__, url_prefix="/productos")
+
+def calcular_precio_con_oferta(db, producto_id, cantidad=1):
+    """
+    Calcula el precio final de un producto considerando ofertas activas.
+    Retorna un dict con precio_final, descuento_aplicado, tipo_oferta, etc.
+    """
+    producto = db.execute("SELECT precio FROM productos WHERE id = ?", (producto_id,)).fetchone()
+    if not producto:
+        return {"precio_final": 0, "descuento_aplicado": 0, "tipo_oferta": None}
+
+    precio_original = producto["precio"]
+    precio_final = precio_original
+    descuento_aplicado = 0
+    tipo_oferta = None
+    descripcion_oferta = None
+
+    # Buscar ofertas activas para este producto
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    ofertas = db.execute("""
+        SELECT o.*, op.*
+        FROM ofertas o
+        JOIN oferta_productos op ON o.id = op.oferta_id
+        WHERE op.producto_id = ?
+        AND o.activo = 1
+        AND o.fecha_inicio <= ?
+        AND o.fecha_fin >= ?
+        ORDER BY o.fecha_inicio DESC
+    """, (producto_id, ahora, ahora)).fetchall()
+
+    for oferta in ofertas:
+        if oferta["tipo_oferta"] == "individual_precio" and oferta["precio_oferta"]:
+            # Precio fijo
+            precio_final = oferta["precio_oferta"]
+            descuento_aplicado = precio_original - precio_final
+            tipo_oferta = "precio_fijo"
+            descripcion_oferta = f"Precio especial: ${precio_final}"
+            break  # Prioridad a precio fijo
+
+        elif oferta["tipo_oferta"] == "individual_cantidad" and oferta["cantidad_minima"] and cantidad >= oferta["cantidad_minima"]:
+            # Descuento por cantidad
+            descuento = precio_original * (oferta["descuento_porcentaje"] / 100)
+            precio_final = precio_original - descuento
+            descuento_aplicado = descuento
+            tipo_oferta = "cantidad"
+            descripcion_oferta = f"Descuento por cantidad: {oferta['descuento_porcentaje']}%"
+            break  # Prioridad alta
+
+        elif oferta["tipo_oferta"] == "conjunto_descuento":
+            # Descuento de conjunto (puede ser global o específico)
+            descuento_pct = oferta["descuento_global"] or oferta["descuento_porcentaje"] or 0
+            descuento = precio_original * (descuento_pct / 100)
+            precio_final = precio_original - descuento
+            descuento_aplicado = descuento
+            tipo_oferta = "conjunto"
+            descripcion_oferta = f"Descuento conjunto: {descuento_pct}%"
+            # No break, puede haber mejores ofertas
+
+    return {
+        "precio_final": precio_final,
+        "descuento_aplicado": descuento_aplicado,
+        "tipo_oferta": tipo_oferta,
+        "descripcion_oferta": descripcion_oferta,
+        "precio_original": precio_original
+    }
 
 
 @productos_bp.route("/")
@@ -151,6 +217,7 @@ def obtener_stock(id):
 @login_required
 def autocomplete():
     q = request.args.get("q", "").strip()
+    cantidad = int(request.args.get("cantidad", 1))  # Para calcular descuentos por cantidad
     db = get_db()
 
     # Intenta buscar por ID primero si es un número
@@ -185,9 +252,19 @@ def autocomplete():
             LIMIT 10
         """, (f"%{q}%",)).fetchall()
 
-    return jsonify([{
-        "id": r["id"],
-        "nombre": r["nombre"],
-        "precio": r["precio"],
-        "unidad": r["unidad"]
-    } for r in rows])
+    # Calcular precios con ofertas para cada producto
+    resultados = []
+    for r in rows:
+        info_oferta = calcular_precio_con_oferta(db, r["id"], cantidad)
+        resultados.append({
+            "id": r["id"],
+            "nombre": r["nombre"],
+            "precio": info_oferta["precio_final"],
+            "precio_original": info_oferta["precio_original"],
+            "unidad": r["unidad"],
+            "tiene_oferta": info_oferta["tipo_oferta"] is not None,
+            "descuento_aplicado": info_oferta["descuento_aplicado"],
+            "descripcion_oferta": info_oferta["descripcion_oferta"]
+        })
+
+    return jsonify(resultados)

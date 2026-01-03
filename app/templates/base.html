@@ -17,6 +17,9 @@
 
             <li class="nav-item"><a class="nav-link" href="/productos/">Productos</a></li>
             <li class="nav-item"><a class="nav-link" href="/proveedores/">Proveedores</a></li>
+            {% if session.get('role') == 'admin' %}
+            <li class="nav-item"><a class="nav-link" href="/ofertas/">Ofertas</a></li>
+            {% endif %}
             <li class="nav-item"><a class="nav-link" href="/ventas/nueva">Nueva venta</a></li>
             <li class="nav-item"><a class="nav-link" href="/reportes/">Reportes</a></li>
             <li class="nav-item"><a class="nav-link" href="/reportes/dashboard">Dashboard</a></li>
