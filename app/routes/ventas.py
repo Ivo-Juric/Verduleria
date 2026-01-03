@@ -78,18 +78,9 @@ def nueva():
 
     total = sum(i["subtotal"] for i in session.get("carrito", []))
 
-    # Obtener carritos pendientes del usuario
-    carritos_pendientes = db.execute("""
-        SELECT id, nombre, total, fecha_creacion
-        FROM carritos_pendientes
-        WHERE usuario_id = ?
-        ORDER BY fecha_creacion DESC
-    """, (session.get("user_id"),)).fetchall()
-
     return render_template("ventas/nueva.html",
                            carrito=session.get("carrito", []),
-                           total=total,
-                           carritos_pendientes=carritos_pendientes)
+                           total=total)
 
 @ventas_bp.route("/quitar/<int:idx>")
 @login_required
@@ -98,108 +89,6 @@ def quitar(idx):
         session["carrito"].pop(idx)
         session.modified = True
         flash("Producto removido del carrito", "info")
-    return redirect(url_for("ventas.nueva"))
-
-@ventas_bp.route("/guardar_pendiente", methods=["POST"])
-@login_required
-def guardar_pendiente():
-    carrito = session.get("carrito", [])
-    if not carrito:
-        flash("Carrito vacío", "warning")
-        return redirect(url_for("ventas.nueva"))
-
-    nombre_carrito = request.form.get("nombre_carrito", f"Carrito {get_adjusted_datetime().strftime('%d/%m %H:%M')}")
-    total = sum(i["subtotal"] for i in carrito)
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("""
-        INSERT INTO carritos_pendientes (usuario_id, nombre, total, fecha_creacion)
-        VALUES (?, ?, ?, ?)
-    """, (session.get("user_id"), nombre_carrito, total, get_adjusted_datetime().strftime("%Y-%m-%d %H:%M")))
-    carrito_id = cur.lastrowid
-
-    for i in carrito:
-        cur.execute("""
-            INSERT INTO detalle_carritos (carrito_id, producto_id, cantidad, subtotal)
-            VALUES (?, ?, ?, ?)
-        """, (carrito_id, i["producto_id"], i["cantidad"], i["subtotal"]))
-
-    db.commit()
-
-    session["carrito"] = []
-    session.modified = True
-    flash(f"Carrito guardado como '{nombre_carrito}'", "success")
-    return redirect(url_for("ventas.nueva"))
-
-@ventas_bp.route("/cargar_pendiente/<int:carrito_id>")
-@login_required
-def cargar_pendiente(carrito_id):
-    db = get_db()
-
-    # Verificar que el carrito pertenece al usuario
-    carrito = db.execute("""
-        SELECT * FROM carritos_pendientes
-        WHERE id = ? AND usuario_id = ?
-    """, (carrito_id, session.get("user_id"))).fetchone()
-
-    if not carrito:
-        flash("Carrito no encontrado", "danger")
-        return redirect(url_for("ventas.nueva"))
-
-    # Cargar detalles
-    detalles = db.execute("""
-        SELECT dc.producto_id, dc.cantidad, dc.subtotal, p.nombre, p.precio, p.stock, u.nombre as unidad
-        FROM detalle_carritos dc
-        JOIN productos p ON dc.producto_id = p.id
-        LEFT JOIN unidades u ON p.unidad_id = u.id
-        WHERE dc.carrito_id = ?
-    """, (carrito_id,)).fetchall()
-
-    session["carrito"] = []
-    for detalle in detalles:
-        # Recalcular precio con ofertas actuales
-        info_precio = calcular_precio_con_oferta(db, detalle["producto_id"], detalle["cantidad"])
-        precio_final = info_precio["precio_final"]
-        subtotal_actual = precio_final * detalle["cantidad"]
-
-        session["carrito"].append({
-            "producto_id": detalle["producto_id"],
-            "nombre": detalle["nombre"],
-            "cantidad": detalle["cantidad"],
-            "precio": precio_final,
-            "precio_original": info_precio["precio_original"],
-            "subtotal": subtotal_actual,
-            "stock_disponible": detalle["stock"],
-            "unidad": detalle["unidad"] or "",
-            "tiene_oferta": info_precio["tipo_oferta"] is not None,
-            "descuento_aplicado": info_precio["descuento_aplicado"],
-            "descripcion_oferta": info_precio["descripcion_oferta"]
-        })
-    session.modified = True
-
-    flash(f"Carrito '{carrito['nombre']}' cargado", "info")
-    return redirect(url_for("ventas.nueva"))
-
-@ventas_bp.route("/eliminar_pendiente/<int:carrito_id>")
-@login_required
-def eliminar_pendiente(carrito_id):
-    db = get_db()
-
-    carrito = db.execute("""
-        SELECT * FROM carritos_pendientes
-        WHERE id = ? AND usuario_id = ?
-    """, (carrito_id, session.get("user_id"))).fetchone()
-
-    if not carrito:
-        flash("Carrito no encontrado", "danger")
-        return redirect(url_for("ventas.nueva"))
-
-    db.execute("DELETE FROM detalle_carritos WHERE carrito_id = ?", (carrito_id,))
-    db.execute("DELETE FROM carritos_pendientes WHERE id = ?", (carrito_id,))
-    db.commit()
-
-    flash("Carrito eliminado", "info")
     return redirect(url_for("ventas.nueva"))
 
 @ventas_bp.route("/finalizar", methods=["GET", "POST"])
