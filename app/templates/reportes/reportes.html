@@ -25,31 +25,43 @@
 
     <div class="row g-3 mt-2">
         <div class="col-md-4">
-            <label>Productos (seleccionar múltiples)</label>
-            <select name="producto" multiple class="form-control" size="3">
+            <label class="form-label">Productos</label>
+            <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
                 {% for p in productos %}
-                <option value="{{ p.id }}" {% if p.id|string in filtros.prod_ids %}selected{% endif %}>{{ p.nombre }}</option>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="producto" value="{{ p.id }}" id="prod_{{ p.id }}" {% if p.id|string in filtros.prod_ids %}checked{% endif %}>
+                    <label class="form-check-label" for="prod_{{ p.id }}">
+                        {{ p.nombre }}
+                    </label>
+                </div>
                 {% endfor %}
-            </select>
-            <small class="text-muted">Mantén Ctrl para seleccionar múltiples</small>
+            </div>
         </div>
         <div class="col-md-4">
-            <label>Categorías (seleccionar múltiples)</label>
-            <select name="categoria" multiple class="form-control" size="3">
+            <label class="form-label">Categorías</label>
+            <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
                 {% for c in categorias %}
-                <option value="{{ c.id }}" {% if c.id|string in filtros.cat_ids %}selected{% endif %}>{{ c.nombre }}</option>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="categoria" value="{{ c.id }}" id="cat_{{ c.id }}" {% if c.id|string in filtros.cat_ids %}checked{% endif %}>
+                    <label class="form-check-label" for="cat_{{ c.id }}">
+                        {{ c.nombre }}
+                    </label>
+                </div>
                 {% endfor %}
-            </select>
-            <small class="text-muted">Mantén Ctrl para seleccionar múltiples</small>
+            </div>
         </div>
         <div class="col-md-4">
-            <label>Unidades (seleccionar múltiples)</label>
-            <select name="unidad" multiple class="form-control" size="3">
+            <label class="form-label">Unidades</label>
+            <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
                 {% for u in unidades %}
-                <option value="{{ u.id }}" {% if u.id|string in filtros.uni_ids %}selected{% endif %}>{{ u.nombre }}</option>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="unidad" value="{{ u.id }}" id="uni_{{ u.id }}" {% if u.id|string in filtros.uni_ids %}checked{% endif %}>
+                    <label class="form-check-label" for="uni_{{ u.id }}">
+                        {{ u.nombre }}
+                    </label>
+                </div>
                 {% endfor %}
-            </select>
-            <small class="text-muted">Mantén Ctrl para seleccionar múltiples</small>
+            </div>
         </div>
     </div>
 
