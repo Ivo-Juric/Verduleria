@@ -120,3 +120,61 @@ def ingresos(id):
     return render_template("proveedores/ingresos.html",
                            proveedor=proveedor,
                            ingresos=ingresos_stock)
+
+
+@proveedores_bp.route("/<int:id>/agregar_compra", methods=["GET", "POST"])
+@login_required
+def agregar_compra(id):
+    db = get_db()
+    proveedor = db.execute("SELECT * FROM proveedores WHERE id=?", (id,)).fetchone()
+    if not proveedor:
+        flash("Proveedor no encontrado", "danger")
+        return redirect(url_for("proveedores.lista"))
+
+    productos = db.execute("""
+        SELECT p.id, p.nombre, u.nombre AS unidad
+        FROM productos p
+        LEFT JOIN unidades u ON p.unidad_id = u.id
+        ORDER BY p.nombre
+    """).fetchall()
+
+    if request.method == "POST":
+        # Procesar los productos agregados
+        productos_ids = request.form.getlist("producto_id[]")
+        cantidades = request.form.getlist("cantidad[]")
+        precios = request.form.getlist("precio[]")
+
+        from datetime import datetime
+        fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for prod_id, cant, prec in zip(productos_ids, cantidades, precios):
+            if prod_id and cant:
+                try:
+                    cantidad = float(cant)
+                    precio_unitario = float(prec) if prec else None
+                    if cantidad <= 0:
+                        continue
+
+                    # Registrar ingreso de stock
+                    db.execute("""
+                        INSERT INTO ingresos_stock (producto_id, proveedor_id, cantidad, fecha, precio_unitario)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (prod_id, id, cantidad, fecha, precio_unitario))
+
+                    # Actualizar stock del producto
+                    db.execute("""
+                        UPDATE productos
+                        SET stock = stock + ?
+                        WHERE id = ?
+                    """, (cantidad, prod_id))
+
+                except ValueError:
+                    continue
+
+        db.commit()
+        flash("Compra registrada correctamente", "success")
+        return redirect(url_for("proveedores.ingresos", id=id))
+
+    return render_template("proveedores/agregar_compra.html",
+                           proveedor=proveedor,
+                           productos=productos)

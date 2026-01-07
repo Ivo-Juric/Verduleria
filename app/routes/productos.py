@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from db import get_db
 from app.utils.auth_decorators import login_required
 from datetime import datetime
+from app.routes.ofertas import desactivar_ofertas_expiradas
 
 productos_bp = Blueprint("productos", __name__, url_prefix="/productos")
 
@@ -10,6 +11,9 @@ def calcular_precio_con_oferta(db, producto_id, cantidad=1):
     Calcula el precio final de un producto considerando ofertas activas.
     Retorna un dict con precio_final, descuento_aplicado, tipo_oferta, etc.
     """
+    # Desactivar ofertas expiradas antes de calcular
+    desactivar_ofertas_expiradas()
+
     producto = db.execute("SELECT precio FROM productos WHERE id = ?", (producto_id,)).fetchone()
     if not producto:
         return {"precio_final": 0, "descuento_aplicado": 0, "tipo_oferta": None}
@@ -21,7 +25,7 @@ def calcular_precio_con_oferta(db, producto_id, cantidad=1):
     descripcion_oferta = None
 
     # Buscar ofertas activas para este producto
-    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ahora = datetime.now().strftime("%Y-%m-%dT%H:%M")
 
     ofertas = db.execute("""
         SELECT o.*, op.*

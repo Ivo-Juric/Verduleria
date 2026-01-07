@@ -18,3 +18,8 @@ body.dark .list-group-item {
     overflow-y: auto;
     border-radius: 5px;
 }
+
+.card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+}

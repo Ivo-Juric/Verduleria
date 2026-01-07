@@ -5,10 +5,18 @@ from datetime import datetime
 
 ofertas_bp = Blueprint("ofertas", __name__, url_prefix="/ofertas")
 
+def desactivar_ofertas_expiradas():
+    """Desactiva automáticamente las ofertas que han expirado."""
+    db = get_db()
+    now = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    db.execute("UPDATE ofertas SET activo = 0 WHERE fecha_fin < ? AND activo = 1", (now,))
+    db.commit()
+
 @ofertas_bp.route("/")
 @login_required
 @admin_required
 def index():
+    desactivar_ofertas_expiradas()
     db = get_db()
     ofertas = db.execute("""
         SELECT o.*,

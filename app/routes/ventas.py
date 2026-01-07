@@ -75,6 +75,8 @@ def nueva():
         })
         session.modified = True
         flash(f"Producto agregado: {producto['nombre']}", "success")
+        if info_precio["tipo_oferta"]:
+            flash(f"Oferta aplicada: {info_precio['descripcion_oferta']}", "info")
 
     total = sum(i["subtotal"] for i in session.get("carrito", []))
 

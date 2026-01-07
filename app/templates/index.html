@@ -1,5 +1,75 @@
 {% extends "base.html" %}
 {% block contenido %}
 <h1 class="fw-bold">Sistema de Verdulería</h1>
-<p>Bienvenido al sistema. Elegí una opción del menú.</p>
+<p>Bienvenido al sistema. Elegí una opción del menú o utiliza las tarjetas a continuación.</p>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Productos</h5>
+                <p class="card-text">Gestionar productos y stock.</p>
+                <a href="/productos/" class="btn btn-primary">Ir a Productos</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Proveedores</h5>
+                <p class="card-text">Administrar proveedores e ingresos.</p>
+                <a href="/proveedores/" class="btn btn-primary">Ir a Proveedores</a>
+            </div>
+        </div>
+    </div>
+    {% if session.get('role') == 'admin' %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Ofertas</h5>
+                <p class="card-text">Crear y gestionar ofertas.</p>
+                <a href="/ofertas/" class="btn btn-primary">Ir a Ofertas</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Ventas</h5>
+                <p class="card-text">Realizar nuevas ventas.</p>
+                <a href="/ventas/nueva" class="btn btn-primary">Nueva Venta</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Reportes</h5>
+                <p class="card-text">Ver reportes y estadísticas.</p>
+                <a href="/reportes/" class="btn btn-primary">Ir a Reportes</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Dashboard</h5>
+                <p class="card-text">Vista general del sistema.</p>
+                <a href="/reportes/dashboard" class="btn btn-primary">Ir al Dashboard</a>
+            </div>
+        </div>
+    </div>
+    {% if session.get('role') == 'admin' %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Usuarios</h5>
+                <p class="card-text">Gestionar usuarios del sistema.</p>
+                <a href="{{ url_for('usuarios.index') }}" class="btn btn-primary">Ir a Usuarios</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

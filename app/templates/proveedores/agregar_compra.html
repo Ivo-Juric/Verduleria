@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<h3>Agregar Compra a {{proveedor.nombre}}</h3>
+
+<form method="POST" id="compraForm">
+    <div id="productosContainer">
+        <div class="producto-row mb-3 border p-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Producto</label>
+                    <select name="producto_id[]" class="form-control producto-select" required>
+                        <option value="">Seleccionar producto</option>
+                        {% for prod in productos %}
+                        <option value="{{prod.id}}">{{prod.nombre}} ({{prod.unidad or 'Sin unidad'}})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Cantidad</label>
+                    <input type="number" name="cantidad[]" step="0.01" min="0.01" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label>Precio Unitario (opcional)</label>
+                    <input type="number" name="precio[]" step="0.01" min="0" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-row">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" id="addRow" class="btn btn-secondary mb-3">Agregar Otro Producto</button>
+    <br>
+    <button type="submit" class="btn btn-primary">Registrar Compra</button>
+    <a href="{{ url_for('proveedores.ingresos', id=proveedor.id) }}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("productosContainer");
+    const addRowBtn = document.getElementById("addRow");
+
+    // Función para crear una nueva fila
+    function createRow() {
+        const row = document.createElement("div");
+        row.className = "producto-row mb-3 border p-3";
+        row.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Producto</label>
+                    <select name="producto_id[]" class="form-control producto-select" required>
+                        <option value="">Seleccionar producto</option>
+                        {% for prod in productos %}
+                        <option value="{{prod.id}}">{{prod.nombre}} ({{prod.unidad or 'Sin unidad'}})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Cantidad</label>
+                    <input type="number" name="cantidad[]" step="0.01" min="0.01" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label>Precio Unitario (opcional)</label>
+                    <input type="number" name="precio[]" step="0.01" min="0" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-row">Eliminar</button>
+                </div>
+            </div>
+        `;
+        return row;
+    }
+
+    // Agregar fila
+    addRowBtn.addEventListener("click", () => {
+        container.appendChild(createRow());
+    });
+
+    // Eliminar fila
+    container.addEventListener("click", (e) => {
+        if (e.target.classList.contains("remove-row")) {
+            const rows = container.querySelectorAll(".producto-row");
+            if (rows.length > 1) {
+                e.target.closest(".producto-row").remove();
+            } else {
+                alert("Debe haber al menos un producto");
+            }
+        }
+    });
+
+    // Validación: no permitir productos duplicados
+    container.addEventListener("change", (e) => {
+        if (e.target.classList.contains("producto-select")) {
+            const selects = container.querySelectorAll(".producto-select");
+            const values = Array.from(selects).map(s => s.value).filter(v => v);
+            const duplicates = values.filter((v, i) => values.indexOf(v) !== i);
+            if (duplicates.length > 0) {
+                alert("No se puede seleccionar el mismo producto más de una vez");
+                e.target.value = "";
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -3,6 +3,7 @@
 <h3>Ingresos de {{ proveedor.nombre }}</h3>
 
 <a href="/proveedores/" class="btn btn-secondary mb-3">Volver</a>
+<a href="{{ url_for('proveedores.agregar_compra', id=proveedor.id) }}" class="btn btn-primary mb-3">Agregar Compra</a>
 
 <table class="table table-striped">
 <thead>

@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
                           data-precio="${i.precio}"
                           data-unidad="${i.unidad || ''}"
                           data-nombre="${i.nombre}">
-                        <strong>[ID: ${i.id}] ${i.nombre}</strong> — $${i.precio} / ${i.unidad || ''}
+                        <strong>[ID: ${i.id}] ${i.nombre}</strong> —
+                        ${i.tiene_oferta ? `<span class="text-decoration-line-through text-muted">$${i.precio_original}</span> <span class="text-success">$${i.precio}</span>` : `$${i.precio}`} / ${i.unidad || ''}
+                        ${i.tiene_oferta ? `<br><small class="text-success">${i.descripcion_oferta}</small>` : ''}
                      </div>`
                 ).join("");
             } catch (err) {
