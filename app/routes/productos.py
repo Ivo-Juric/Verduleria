@@ -84,7 +84,8 @@ def lista():
             p.id,
             p.nombre,
             p.precio,
-            p.stock,
+            p.stock - p.stock_defectuoso AS stock_disponible,
+            p.stock_defectuoso,
             c.nombre AS categoria,
             u.nombre AS unidad
         FROM productos p
@@ -135,21 +136,53 @@ def editar(id):
     unidades = db.execute("SELECT * FROM unidades").fetchall()
 
     if request.method == "POST":
-        nombre = request.form["nombre"]
-        categoria_id = request.form["categoria_id"]
-        precio = float(request.form["precio"])
-        stock = float(request.form["stock"])
-        unidad_id = request.form["unidad_id"]
+        if "actualizar_producto" in request.form:
+            nombre = request.form["nombre"]
+            categoria_id = request.form["categoria_id"]
+            precio = float(request.form["precio"])
+            unidad_id = request.form["unidad_id"]
 
-        db.execute("""
-            UPDATE productos
-            SET nombre=?, precio=?, stock=?, categoria_id=?, unidad_id=?
-            WHERE id=?
-        """, (nombre, precio, stock, categoria_id, unidad_id, id))
-        db.commit()
+            db.execute("""
+                UPDATE productos
+                SET nombre=?, precio=?, categoria_id=?, unidad_id=?
+                WHERE id=?
+            """, (nombre, precio, categoria_id, unidad_id, id))
+            db.commit()
 
-        flash("Producto actualizado", "success")
-        return redirect(url_for("productos.lista"))
+            flash("Producto actualizado", "success")
+            return redirect(url_for("productos.editar", id=id))
+
+        elif "marcar_defectuoso" in request.form:
+            cantidad_defectuosa = float(request.form["cantidad_defectuosa"])
+            if cantidad_defectuosa > 0:
+                stock_disponible = producto["stock"] - producto["stock_defectuoso"]
+                if cantidad_defectuosa <= stock_disponible:
+                    db.execute("""
+                        UPDATE productos
+                        SET stock_defectuoso = stock_defectuoso + ?
+                        WHERE id=?
+                    """, (cantidad_defectuosa, id))
+                    db.commit()
+                    flash(f"Se marcaron {cantidad_defectuosa} unidades como defectuosas", "warning")
+                else:
+                    flash("Cantidad excede el stock disponible", "danger")
+            return redirect(url_for("productos.editar", id=id))
+
+        elif "tirar_basura" in request.form:
+            cantidad_basura = float(request.form["cantidad_basura"])
+            if cantidad_basura > 0:
+                if cantidad_basura <= producto["stock_defectuoso"]:
+                    db.execute("""
+                        UPDATE productos
+                        SET stock_defectuoso = stock_defectuoso - ?,
+                            stock = stock - ?
+                        WHERE id=?
+                    """, (cantidad_basura, cantidad_basura, id))
+                    db.commit()
+                    flash(f"Se tiraron {cantidad_basura} unidades defectuosas a la basura", "danger")
+                else:
+                    flash("Cantidad excede el stock defectuoso", "danger")
+            return redirect(url_for("productos.editar", id=id))
 
     return render_template("productos/editar.html",
                            producto=producto,
@@ -211,9 +244,9 @@ def gestionar_stock(id):
 @login_required
 def obtener_stock(id):
     db = get_db()
-    producto = db.execute("SELECT stock FROM productos WHERE id=?", (id,)).fetchone()
+    producto = db.execute("SELECT stock - stock_defectuoso AS stock_disponible FROM productos WHERE id=?", (id,)).fetchone()
     if producto:
-        return jsonify({"stock": producto["stock"]})
+        return jsonify({"stock": producto["stock_disponible"]})
     return jsonify({"error": "Producto no encontrado"}), 404
 
 

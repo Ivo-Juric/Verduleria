@@ -2,32 +2,65 @@
 {% block contenido %}
 <h3>Editar producto</h3>
 
-<form method="POST" class="card p-3 shadow-sm">
+<div class="row">
+    <div class="col-md-6">
+        <form method="POST" class="card p-3 shadow-sm mb-4">
+            <h5>Información del Producto</h5>
+            <input type="hidden" name="actualizar_producto" value="1">
 
-    <label>Nombre</label>
-    <input name="nombre" value="{{ producto.nombre }}" class="form-control mb-2">
+            <label>Nombre</label>
+            <input name="nombre" value="{{ producto.nombre }}" class="form-control mb-2" required>
 
-    <label>Categoría</label>
-    <select name="categoria_id" class="form-control mb-2">
-        {% for c in categorias %}
-            <option value="{{ c.id }}" {% if c.id == producto.categoria_id %}selected{% endif %}>
-                {{ c.nombre }}
-            </option>
-        {% endfor %}
-    </select>
+            <label>Categoría</label>
+            <select name="categoria_id" class="form-control mb-2" required>
+                {% for c in categorias %}
+                    <option value="{{ c.id }}" {% if c.id == producto.categoria_id %}selected{% endif %}>
+                        {{ c.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
 
-    <label>Precio</label>
-    <input name="precio" value="{{ producto.precio }}" class="form-control mb-2" type="number" step="0.01">
+            <label>Precio</label>
+            <input name="precio" value="{{ producto.precio }}" class="form-control mb-2" type="number" step="0.01" required>
 
-    <label>Unidad de medida</label>
-    <select name="unidad_id" class="form-control mb-2">
-        {% for u in unidades %}
-            <option value="{{ u.id }}" {% if u.id == producto.unidad_id %}selected{% endif %}>
-                {{ u.nombre }}
-            </option>
-        {% endfor %}
-    </select>
+            <label>Unidad de medida</label>
+            <select name="unidad_id" class="form-control mb-2" required>
+                {% for u in unidades %}
+                    <option value="{{ u.id }}" {% if u.id == producto.unidad_id %}selected{% endif %}>
+                        {{ u.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
 
-    <button class="btn btn-warning">Actualizar</button>
-</form>
+            <button class="btn btn-warning">Actualizar Producto</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card p-3 shadow-sm mb-4">
+            <h5>Estado del Stock</h5>
+            <p><strong>Stock Total:</strong> {{ producto.stock }}</p>
+            <p><strong>Stock Disponible:</strong> {{ producto.stock - producto.stock_defectuoso }}</p>
+            <p><strong>Stock Defectuoso:</strong> {{ producto.stock_defectuoso }}</p>
+        </div>
+
+        <form method="POST" class="card p-3 shadow-sm mb-4">
+            <h5>Marcar como Defectuoso</h5>
+            <input type="hidden" name="marcar_defectuoso" value="1">
+            <label>Cantidad a marcar como defectuosa</label>
+            <input name="cantidad_defectuosa" class="form-control mb-2" type="number" step="0.01" min="0" required>
+            <button class="btn btn-warning">Marcar Defectuoso</button>
+        </form>
+
+        <form method="POST" class="card p-3 shadow-sm">
+            <h5>Tirar a la Basura</h5>
+            <input type="hidden" name="tirar_basura" value="1">
+            <label>Cantidad defectuosa a tirar</label>
+            <input name="cantidad_basura" class="form-control mb-2" type="number" step="0.01" min="0" required>
+            <button class="btn btn-danger">Tirar a la Basura</button>
+        </form>
+    </div>
+</div>
+
+<a href="/productos/" class="btn btn-secondary">Volver a la Lista</a>
 {% endblock %}

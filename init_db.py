@@ -86,6 +86,12 @@ def init_db():
     );
     """)
 
+    # Agregar columna stock_defectuoso si no existe
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN stock_defectuoso INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # La columna ya existe
+
     # -----------------------
     # Tabla ventas
     # -----------------------

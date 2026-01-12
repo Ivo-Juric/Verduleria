@@ -47,8 +47,9 @@ def nueva():
             return redirect(url_for("ventas.nueva"))
 
         # Validar cantidad contra stock
-        if cantidad > producto["stock"]:
-            flash(f"Stock insuficiente. Disponible: {producto['stock']}", "danger")
+        stock_disponible = producto["stock"] - producto["stock_defectuoso"]
+        if cantidad > stock_disponible:
+            flash(f"Stock insuficiente. Disponible: {stock_disponible}", "danger")
             return redirect(url_for("ventas.nueva"))
 
         # Calcular precio con oferta aplicada
@@ -67,7 +68,7 @@ def nueva():
             "precio": precio_final,
             "precio_original": info_precio["precio_original"],
             "subtotal": subtotal,
-            "stock_disponible": producto["stock"],
+            "stock_disponible": producto["stock"] - producto["stock_defectuoso"],
             "unidad": unidad_nombre,
             "tiene_oferta": info_precio["tipo_oferta"] is not None,
             "descuento_aplicado": info_precio["descuento_aplicado"],

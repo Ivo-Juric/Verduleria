@@ -4,7 +4,9 @@
 
 <div class="card p-3 shadow-sm" style="max-width:500px;">
     <div class="mb-3">
-        <p><strong>Stock actual:</strong> {{ producto.stock }} unidades</p>
+        <p><strong>Stock Total:</strong> {{ producto.stock }} unidades</p>
+        <p><strong>Stock Disponible:</strong> {{ producto.stock - producto.stock_defectuoso }} unidades</p>
+        <p><strong>Stock Defectuoso:</strong> {{ producto.stock_defectuoso }} unidades</p>
     </div>
 
     <form method="POST">
